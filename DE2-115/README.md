@@ -15,4 +15,4 @@ To achieve goal you should have linux system with Quartus Prime installed
 Each project should containg at leas three files:
   - de2_115.qpf: It is Quartus Ppoject File needed for Quartus project detection
   - de2_115.qsf: It is Quartus Setting FIle needed for Quartus project configuration such as pin assignment
-  - de2_115.v: It is top level verilog file. Inputs and Outputs and wired directly to DE2-115 boardones. It can be used as convenient entry point for project.
+  - de2_115.v: It is top level verilog file. Inputs and Outputs are wired directly to DE2-115 board ones. It can be used as convenient entry point for project.
