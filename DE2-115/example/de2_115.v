@@ -1,3 +1,9 @@
+/*
+ * Template file that can be used in many projects
+ */
+
+`include "../library.v"
+
 module de2_115
 (
   input  wire        CLOCK_50, // Clock
@@ -13,6 +19,7 @@ module de2_115
   output wire [6:0]  HEX5,
   output wire [6:0]  HEX6
 );
+// 4 buttons synchronization
 wire [3:0] key_sync;
 button
 key0_sync
