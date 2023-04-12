@@ -1,3 +1,5 @@
+# FPGA Verilog learning
+
 This repo is used to store files used in FPGA learning
 
 Directory structure
