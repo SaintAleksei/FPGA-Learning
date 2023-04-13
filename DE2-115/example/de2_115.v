@@ -21,17 +21,12 @@ module de2_115
   output wire [6:0]  HEX7
 );
 // 4 buttons sychronization
-wire [3:0] key_sync;
-genvar i;
-generate
-  for (i = 0; i < 4; i = i + 1)
-  begin: buttons_loop
-    button key_sync_button
-    (
-      .clk(CLOCK_50),
-      .button_async(KEY[i]),
-      .button_sync(key_sync[i])
-    );
-  end
-endgenerate
+  wire [3:0] key_pressed;
+  de2_115_buttons
+  buttons
+  (
+    .clk(CLOCK_50),
+    .buttons(KEY),
+    .pressed(key_pressed)
+  );
 endmodule
