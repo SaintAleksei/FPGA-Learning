@@ -28,11 +28,11 @@ genvar i;
 generate
   for (i = 0; i < 4; i = i + 1)
   begin: buttons_loop
-    button key_sync
+    button key_sync_button
     (
       .clk(CLOCK_50),
-      .button_async(KEY[0]),
-      .button_sybc(key_sync[0])
+      .button_async(KEY[i]),
+      .button_sync(key_sync[i])
     );
   end
 endgenerate
@@ -41,15 +41,15 @@ endgenerate
 wire [7:0] number [2:0];
 assign number[0] = SW[7:0];
 assign number[1] = SW[16:9];
-wire [7:0] sum;
-assign {LEDG[8], sum} = number[0] + number[1];
+assign LEDR[7:0] = number[0];
+assign LEDR[16:9] = number[1];
 wire [6:0] digits [5:0];
-assign digits[0] = HEX6;
-assign digits[1] = HEX7;
-assign digits[2] = HEX5;
-assign digits[3] = HEX4;
-assign digits[4] = HEX3;
-assign digits[5] = HEX2;
+assign HEX6 = digits[0];
+assign HEX7 = digits[1];
+assign HEX4 = digits[2];
+assign HEX5 = digits[3];
+assign HEX2 = digits[4];
+assign HEX3 = digits[5];
 generate
   for (i = 0; i < 3; i = i + 1)
   begin: ss_loop
@@ -67,11 +67,14 @@ generate
 endgenerate
 
 // Perfom addition when button is pressed
-reg sum_reg;
-assign number[2] = sum_reg;
+reg [8:0] result;
+assign number[2] = result[7:0];
+assign LEDG[8:0] = result;
 always @(posedge CLOCK_50)
   if (key_sync[0])
-    sum_reg <= 8'b00000000;
+    result <= 9'b00000000;
   else if (key_sync[1])
-    sum_reg <= sum;
+    result <= number[1] + number[0];
+  else if (key_sync[2])
+    result <= number[0] - number[1];
 endmodule
