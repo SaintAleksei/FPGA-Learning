@@ -15,6 +15,7 @@ module de2_115
   output wire [6:0]  HEX5,
   output wire [6:0]  HEX6
 );
+// Sync buttons
 wire [3:0] key_sync;
 button
 key0_sync
@@ -44,10 +45,12 @@ key3_sync
   .button_async(KEY[3]),
   .button_sync(key_sync[3])
 );
+
+// Task logic
 reg [7:0] red_value;
 assign LEDR = red_value;
 reg [7:0] green_value;
-assign LEFG = green_value;
+assign LEDG = green_value;
 always @(posedge CLOCK_50)
   if (key_sync[0])
   begin
@@ -58,9 +61,11 @@ always @(posedge CLOCK_50)
     red_value <= SW[7:0];
   else if (key_sync[2])
   begin
-    green_value <= red_value[0];
-    red_value   <= (red_value >> 1) | (8'b10000000 & {8{SW[0]}});
+    green_value <= {red_value[0], green_value[7:1]};
+    red_value   <= {SW[8], red_value[7:1]};
   end
+
+// Connect 7-segment displays
 sevseg
 ss_hex0
 (
