@@ -17,36 +17,21 @@ module de2_115
   output wire [6:0]  HEX3,
   output wire [6:0]  HEX4,
   output wire [6:0]  HEX5,
-  output wire [6:0]  HEX6
+  output wire [6:0]  HEX6,
+  output wire [6:0]  HEX7
 );
-// 4 buttons synchronization
+// 4 buttons sychronization
 wire [3:0] key_sync;
-button
-key0_sync
-(
-  .clk(CLOCK_50),
-  .button_async(KEY[0]),
-  .button_sync(key_sync[0])
-);
-button
-key1_sync
-(
-  .clk(CLOCK_50),
-  .button_async(KEY[1]),
-  .button_sync(key_sync[1])
-);
-button
-key2_sync
-(
-  .clk(CLOCK_50),
-  .button_async(KEY[2]),
-  .button_sync(key_sync[2])
-);
-button
-key3_sync
-(
-  .clk(CLOCK_50),
-  .button_async(KEY[3]),
-  .button_sync(key_sync[3])
-);
+genvar i;
+generate
+  for (i = 0; i < 4; i = i + 1)
+  begin: buttons_loop
+    button key_sync_button
+    (
+      .clk(CLOCK_50),
+      .button_async(KEY[i]),
+      .button_sync(key_sync[i])
+    );
+  end
+endgenerate
 endmodule
