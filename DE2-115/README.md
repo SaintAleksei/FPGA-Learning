@@ -1,6 +1,6 @@
 # DE2-115 Verilog projects
 
-Here colleted some project for DE2-115 board.
+Here are colleted some project for DE2-115 board.
 
 Each project has it's own directory.
 
@@ -12,7 +12,9 @@ To flash compiled project on real board Windows version of Quartus should be use
 
 To achieve goal you should have linux system with Quartus Prime installed.
 
-Each project should contain at leas three files:
+Also you can work with project using Quartus GUI in any system it's provided.
+
+Each project should contain at least three files:
   - de2_115.qpf: It is Quartus Ppoject File needed for Quartus project detection
   - de2_115.qsf: It is Quartus Setting FIle needed for Quartus project configuration such as pin assignment
   - de2_115.v: It is file with top level verilog module, inputs and outputs if which, are wired directly to DE2-115 board ones. It can be used as convenient entry point for project.
