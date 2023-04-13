@@ -20,6 +20,7 @@ wire [6:0] lut [0:15];
 assign lut[0]  = 7'b0111111;
 assign lut[1]  = 7'b0000110;
 assign lut[2]  = 7'b1011011;
+assign lut[3]  = 7'b1001111;
 assign lut[4]  = 7'b1100110;
 assign lut[5]  = 7'b1101101;
 assign lut[6]  = 7'b1111101;
@@ -33,6 +34,40 @@ assign lut[13] = 7'b1011110;
 assign lut[14] = 7'b1111001;
 assign lut[15] = 7'b1110001;
 assign digit   = ~lut[number];
+endmodule
+
+module div
+#(
+  BIT_DEPTH = 8,
+  DIVIDER   = 10
+)
+(
+  input wire reset,
+  input wire clk,
+  input wire load,
+  input wire [BIT_DEPTH-1:0] value,
+  output reg ready,
+  output reg [BIT_DEPTH-1:0] result,
+  output reg [BIT_DEPTH-1:0] remainder
+);
+always @(posedge clk)
+  if (reset)
+  begin
+    ready     <= 0;
+    result    <= 0;
+    remainder <= 0;
+  end
+  else if (load)
+  begin
+    remainder <= value;
+    ready     <= 0;
+    result    <= 0;
+  end
+  else if (remainder >= DIVIDER)
+  begin
+    remainder <= remainder - DIVIDER;
+    result    <= result + 1;
+  end
 endmodule
 
 // simple sync button
@@ -85,23 +120,12 @@ module shiftreg
   input  right_shift_event,
   output reg [BIT_DEPTH-1:0] register 
 );
-wire [BIT_DEPTH-1:0] left_shifted  = (register << 1) | 8'b00000001 & {8{left_shift_event}};
-wire [BIT_DEPTH-1:0] right_shifted = (register >> 1) | 8'b10000000 & {8{right_shift_event}};
-/*
-assign left_shifted[0]  = left_shift_bit;
+wire [BIT_DEPTH-1:0] left_shifted;
+assign left_shifted[0] = left_shift_bit;
+assign left_shifted[BIT_DEPTH-1:1] = register[BIT_DEPTH-2:0];
+wire [BIT_DEPTH-1:0] right_shifted;
 assign right_shifted[BIT_DEPTH-1] = right_shift_bit;
-genvar gi;
-generate for (gi = 0; gi < BIT_DEPTH-2; gi = gi + 1)
-begin: left_shifted_loop
-	assign left_shifted[gi+1] = register[gi];
-end
-endgenerate
-generate for (gi = 0; gi < BIT_DEPTH-2; gi = gi + 1)
-begin: right_shifter_loop
-	assign right_shifted[gi] = register[gi+1];
-end
-endgenerate
-*/
+assign right_shifted[BIT_DEPTH-2:0] = register[BIT_DEPTH-1:1];
 always @(posedge clk)
   if (reset)
     register <= 0;
