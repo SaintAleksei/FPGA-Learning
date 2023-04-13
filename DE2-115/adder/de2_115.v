@@ -53,7 +53,7 @@ key3_sync
 );
 assign LEDR[7:0]  = SW[7:0];
 assign LEDR[16:9] = SW[16:9];
-reg sum;
+reg [7:0] sum;
 assign LEDG[7:0]  = sum;
 always @(posedge CLOCK_50)
   if (key_sync[0])
