@@ -38,48 +38,57 @@ endmodule
 
 // Divison module provided by GPT-4. I don't how it wotks
 // (c) GPT-4
-module division #(parameter DIVIDER = 32)(
-    input wire clk,
-    input wire reset,
-    input wire start,
-    output reg done,
-    input wire [DIVIDER-1:0] dividend,
-    input wire [DIVIDER-1:0] divisor,
-    output reg [DIVIDER-1:0] quotient,
-    output reg [DIVIDER-1:0] remainder
+// Declare the division module with a parameter named BIT_DEPTH, which represents the bit width of the inputs and outputs.
+module division #(parameter BIT_DEPTH = 32)(
+    input wire clk,                  // Clock signal input
+    input wire reset,                // Reset signal input
+    input wire start,                // Start signal input
+    output reg done,                 // Done signal output
+    input wire [BIT_DEPTH-1:0] dividend, // Dividend input
+    input wire [BIT_DEPTH-1:0] divisor,  // Divisor input
+    output reg [BIT_DEPTH-1:0] quotient, // Quotient output
+    output reg [BIT_DEPTH-1:0] remainder // Remainder output
 );
 
-reg [DIVIDER*2-1:0] temp;
-reg [DIVIDER-1:0] sub_res;
-reg [DIVIDER:0] count;
+// Declare the internal registers needed for the algorithm.
+reg [BIT_DEPTH*2-1:0] temp;         // Temporary register to store the dividend and partial remainders.
+reg [BIT_DEPTH-1:0] sub_res;        // Register to store the subtraction result.
+reg [BIT_DEPTH:0] count;            // Counter to keep track of the division steps.
 
+// The always block is sensitive to the rising edge of the clock and reset signals.
 always @(posedge clk or posedge reset) begin
+    // When the reset signal is high, initialize all internal registers and outputs to 0.
     if (reset) begin
         quotient <= 0;
         remainder <= 0;
         temp <= 0;
         count <= 0;
         done <= 0;
-    end else if (start) begin
-        if (count == 0) begin
-            temp <= {dividend, dividend[DIVIDER-1]};
-            count <= DIVIDER;
-        end else begin
-            temp <= temp << 1;
-            sub_res <= temp[DIVIDER*2-1:DIVIDER] - divisor;
-            if (sub_res[DIVIDER-1] == 0) begin
-                temp[DIVIDER*2-1:DIVIDER] <= sub_res;
+    end else if (start) begin // When the start signal is high, begin the division process.
+        if (count == 0) begin // When the counter is 0, initialize the temp register and the counter.
+            temp <= {dividend, dividend[BIT_DEPTH-1]};
+            count <= BIT_DEPTH;
+        end else begin // In other steps of the division process:
+            temp <= temp << 1; // Left-shift the temp register.
+            // Subtract the divisor from the upper half of the temp register and store the result in the sub_res register.
+            sub_res <= temp[BIT_DEPTH*2-1:BIT_DEPTH] - divisor;
+
+            // If the subtraction result is positive, update the temp register and set the current bit of the quotient to 1.
+            if (sub_res[BIT_DEPTH-1] == 0) begin
+                temp[BIT_DEPTH*2-1:BIT_DEPTH] <= sub_res;
                 quotient <= quotient << 1 | 1'b1;
-            end else begin
+            end else begin // If the subtraction result is negative, set the current bit of the quotient to 0.
                 quotient <= quotient << 1 | 1'b0;
             end
+            // Decrement the counter.
             count <= count - 1;
+            // When the counter reaches 1, the division process is complete. Set the done signal and update the remainder output.
             if (count == 1) begin
                 done <= 1;
-                remainder <= temp[DIVIDER*2-1:DIVIDER];
+                remainder <= temp[BIT_DEPTH*2-1:BIT_DEPTH];
             end
         end
-    end else begin
+    end else begin // If the start signal is low, set the done signal to 0.
         done <= 0;
     end
 end
@@ -111,7 +120,7 @@ module sync
   output wire posedge_sync, 
   output wire negedge_sync
 );
-  reg first, second;
+  reg late_sync;
   always @(posedge clk)
   begin
     sync <= async;
@@ -139,8 +148,8 @@ module de2_115_buttons
         .clk(clk),
         .async(buttons[i]),
         .sync(sync[i]),
-        .posedge_sync(unpressed),
-        .negedge_sync(pressed)
+        .posedge_sync(unpressed[i]),
+        .negedge_sync(pressed[i])
       );
     end
   endgenerate
