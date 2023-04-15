@@ -36,57 +36,76 @@ module sevseg
   assign digit   = ~lut[number];
 endmodule
 
-// Divison module provided by GPT-4. I don't how it wotks
-// (c) GPT-4
+/*
+ *  Divison module provided by GPT-4 with my fixes. It seems that GPT-4 doens't
+ * understand concept of '<=' operation, because C version of this algorithm he
+ * provided is correct. You can find it in file division.c. Provided algorithm
+ * is called "non-restoring division" it use BIT_DEPTH pulses to perfom
+ * division of BIT_DEPTH-bit unsigned numbers
+*/
+
 // Declare the division module with a parameter named BIT_DEPTH, which represents the bit width of the inputs and outputs.
 module division #(parameter BIT_DEPTH = 32)(
     input wire clk,                  // Clock signal input
     input wire reset,                // Reset signal input
     input wire start,                // Start signal input
     output reg done,                 // Done signal output
-    input wire [BIT_DEPTH-1:0] dividend, // Dividend input
-    input wire [BIT_DEPTH-1:0] divisor,  // Divisor input
-    output reg [BIT_DEPTH-1:0] quotient, // Quotient output
-    output reg [BIT_DEPTH-1:0] remainder // Remainder output
+    input wire  [BIT_DEPTH-1:0] dividend_in, // Dividend input
+    input wire  [BIT_DEPTH-1:0] divisor_in,  // Divisor input
+    output reg  [BIT_DEPTH-1:0] quotient,    // Quotient output
+    output wire [BIT_DEPTH-1:0] remainder    // Remainder output
 );
 
 // Declare the internal registers needed for the algorithm.
-reg [BIT_DEPTH*2-1:0] temp;         // Temporary register to store the dividend and partial remainders.
-reg [BIT_DEPTH-1:0] sub_res;        // Register to store the subtraction result.
-reg [BIT_DEPTH:0] count;            // Counter to keep track of the division steps.
+reg [BIT_DEPTH*2-1:0] temp;     // Temporary register to store the dividend and partial remainders.
+reg [BIT_DEPTH-1:0]   count;    // Counter to keep track of the division steps.
+reg [BIT_DEPTH-1:0]   divisor;  // Stored divisor, needed to get rid of troubles when divisor_in is changed during algorithm
+
+assign remainder = temp[BIT_DEPTH*2-1:BIT_DEPTH]; 
+
+// Some helpfull wires to make always block more clear
+wire [BIT_DEPTH*2-1:0] temp_shifted        = temp << 1;
+wire [BIT_DEPTH-1:0]   remainder_shifted   = temp_shifted[BIT_DEPTH*2-1:BIT_DEPTH];
+wire [BIT_DEPTH-1:0]   remainder_new_step  = (remainder_shifted[BIT_DEPTH-1]) ? remainder_shifted + divisor :
+                                                                                remainder_shifted - divisor;
+wire [BIT_DEPTH-1:0]   remainder_last_step = (remainder_new_step[BIT_DEPTH-1]) ? remainder_new_step + divisor :
+                                                                                 remainder_new_step;
+wire [BIT_DEPTH*2-1:0] temp_new      = {remainder_new_step,  temp_shifted[BIT_DEPTH-1:0]};
+wire [BIT_DEPTH*2-1:0] temp_last     = {remainder_last_step, temp_shifted[BIT_DEPTH-1:0]};
+wire [BIT_DEPTH-1:0]   quotient_new  = {quotient[BIT_DEPTH-2:0], ~remainder_new_step[BIT_DEPTH-1]};
 
 // The always block is sensitive to the rising edge of the clock and reset signals.
-always @(posedge clk or posedge reset) begin
+always @(posedge clk) begin
     // When the reset signal is high, initialize all internal registers and outputs to 0.
     if (reset) begin
         quotient <= 0;
-        remainder <= 0;
         temp <= 0;
         count <= 0;
         done <= 0;
+        divisor <= 0;
     end else if (start) begin // When the start signal is high, begin the division process.
-        if (count == 0) begin // When the counter is 0, initialize the temp register and the counter.
-            temp <= {dividend, dividend[BIT_DEPTH-1]};
-            count <= BIT_DEPTH;
-        end else begin // In other steps of the division process:
-            temp <= temp << 1; // Left-shift the temp register.
-            // Subtract the divisor from the upper half of the temp register and store the result in the sub_res register.
-            sub_res <= temp[BIT_DEPTH*2-1:BIT_DEPTH] - divisor;
-
-            // If the subtraction result is positive, update the temp register and set the current bit of the quotient to 1.
-            if (sub_res[BIT_DEPTH-1] == 0) begin
-                temp[BIT_DEPTH*2-1:BIT_DEPTH] <= sub_res;
-                quotient <= quotient << 1 | 1'b1;
-            end else begin // If the subtraction result is negative, set the current bit of the quotient to 0.
-                quotient <= quotient << 1 | 1'b0;
+        if (count == 0 && !done) begin // When the counter is 0, initialize registers with started values
+            temp <= {{BIT_DEPTH{1'b0}}, dividend_in};
+            if (divisor_in == 0) begin
+                quotient <= 0;
+                done     <= 1;
+            end else begin
+                count    <= BIT_DEPTH;
+                divisor  <= divisor_in;
             end
+        end else if (!done) begin // In other steps of the division process:
+            if (count == 1) begin
+              // Last iteration
+              done <= 1;
+              temp <= temp_last;
+            end else
+              // Not last iteration
+              temp <= temp_new;
+
+            // Update quotient
+            quotient <= quotient_new;
             // Decrement the counter.
             count <= count - 1;
-            // When the counter reaches 1, the division process is complete. Set the done signal and update the remainder output.
-            if (count == 1) begin
-                done <= 1;
-                remainder <= temp[BIT_DEPTH*2-1:BIT_DEPTH];
-            end
         end
     end else begin // If the start signal is low, set the done signal to 0.
         done <= 0;

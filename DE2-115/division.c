@@ -1,3 +1,7 @@
+/*
+ * (c) GPT-4
+ */
+
 #include <stdio.h>
 #include <limits.h>
 
@@ -21,7 +25,12 @@ void non_restoring_division(unsigned int dividend, unsigned int divisor, unsigne
     int partial_remainder = 0;
 
     // Non-restoring division algorithm
-    for (int i = 0; i < n; i++) {
+    for (int i = n; i > 0; i--) {
+        printf("Iteration i = [%d]\n", i);
+        printf("\tquotient = %x\n", *quotient);
+        printf("\tpartial_remainder = %x\n", partial_remainder);
+        printf("\t...\n");
+
         partial_remainder <<= 1; // Shift partial_remainder left by 1
         partial_remainder |= (dividend & (1u << (n - 1))) != 0; // Bring down the next bit of the dividend
         dividend <<= 1; // Shift the dividend left by 1
@@ -32,10 +41,14 @@ void non_restoring_division(unsigned int dividend, unsigned int divisor, unsigne
             partial_remainder += divisor;
         }
 
+
         *quotient <<= 1; // Shift quotient left by 1
         if (partial_remainder >= 0) {
             *quotient |= 1; // Set the least significant bit of the quotient
         }
+
+        printf("\tpartial_remainder = %x\n", partial_remainder);
+        printf("\tquotient = %x\n", *quotient);
     }
 
     // Adjust the partial_remainder based on its sign
@@ -45,12 +58,17 @@ void non_restoring_division(unsigned int dividend, unsigned int divisor, unsigne
 
     // Assign the remainder value
     *remainder = (unsigned int) partial_remainder;
+
+    printf("partial_remainder = %x\n", partial_remainder);
+    printf("quotient = %x\n", *quotient);
 }
 
 int main() {
-    unsigned int dividend, divisor, quotient, remainder;
+    unsigned int dividend, divisor;
+    unsigned int quotient = 0;
+    unsigned int remainder = 0;
 
-    dividend = 27;
+    dividend = 100;
     divisor = 4;
 
     non_restoring_division(dividend, divisor, &quotient, &remainder);
