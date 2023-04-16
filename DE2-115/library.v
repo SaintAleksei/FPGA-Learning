@@ -92,13 +92,13 @@ module notation
     .start(start),
     .done(done),
     .dividend_in(current_number),
-    .divisor_in(BASE[7:0]),
+    .divisor_in(BASE[BIT_DEPTH-1:0]),
     .quotient(quotient),
     .remainder(remainder)
   );
 
   // State machine logic
-  always @(posedge clk or posedge reset) begin
+  always @(posedge clk) begin
     if (reset) begin
       current_number <= 0;
       idx <= 0;
@@ -130,6 +130,7 @@ module notation
         end
         WAIT: begin
           if (done) begin
+            start <= 0;
             state <= START_DIVISION;
           end
         end
