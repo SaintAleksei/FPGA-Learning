@@ -146,7 +146,8 @@ module notation
   // Wire the output 'digits' to the internal_digits array
   genvar i;
   generate
-    for (i = 0; i < NUM_DIGITS; i = i + 1) begin
+    for (i = 0; i < NUM_DIGITS; i = i + 1)
+    begin: digits_wires_loop
       assign digits[i * BIT_DEPTH +: BIT_DEPTH] = internal_digits[i];
     end
   endgenerate
