@@ -20,99 +20,67 @@ module de2_115
   output wire [6:0]  HEX6,
   output wire [6:0]  HEX7
 );
-// 4 buttons sychronization
-wire [3:0] key_sync;
-genvar i;
-generate
-  for (i = 0; i < 4; i = i + 1)
-  begin: buttons_loop
-    button key_sync_button
-    (
-      .clk(CLOCK_50),
-      .button_async(KEY[i]),
-      .button_sync(key_sync[i])
-    );
-  end
-endgenerate
+  // 4 buttons sychronization
+  wire [3:0] key_sync;
+  de2_115_buttons
+  buttons
+  (
+    .clk(CLOCK_50),
+    .buttons(KEY),
+    .pressed(key_sync)
+  );
 
-// 7-segment displays connection
-wire [6:0] digits  [4:0];
-reg  [3:0] numbers [4:0];
-generate
-  for (i = 0; i < 5; i = i + 1)
-  begin: dec_loop
-    sevseg ss_dec
-    (
-      .number(numbers[i]),
-      .digit(digits[i])
-    );
-  end
-endgenerate
-assign HEX0 = digits[0];
-assign HEX1 = digits[1];
-assign HEX2 = digits[2];
-assign HEX4 = digits[3];
-assign HEX5 = digits[4];
+  // 7-segment displays connection
+  parameter SEVSEG_OFF = 7'b1111111;
+  wire [6:0] digits  [7:0];
+  wire [3:0] numbers [7:0];
+  genvar i;
+  generate
+    for (i = 0; i < 8; i = i + 1)
+    begin: sevseg_loop
+      sevseg ss
+      (
+        .number(numbers[i]),
+        .digit(digits[i])
+      );
+    end
+  endgenerate
+  assign HEX0 = digits[0];
+  assign HEX1 = digits[1];
+  assign HEX2 = digits[2];
+  assign HEX3 = SEVSEG_OFF;
+  assign HEX4 = digits[4];
+  assign HEX5 = digits[5];
+  assign HEX6 = SEVSEG_OFF;
+  assign HEX7 = SEVSEG_OFF;
 
-// Register conatining value
-reg [7:0] value;
+  // Wires and registers required for device logic
+  wire [23:0] dec_digits;
+  wire        conversion_done;
+  reg  [7:0]  stored_number;
+  assign numbers[0] = dec_digits[7:0];
+  assign numbers[1] = dec_digits[15:8];
+  assign numbers[2] = dec_digits[23:16];
+  assign numbers[4] = stored_number[3:0];
+  assign numbers[5] = stored_number[7:4];
+  assign LEDR[7:0]  = SW[7:0];
+  assign LEDG[7:0]  = stored_number;
 
+  // Device logic
+  always @(posedge CLOCK_50)
+    if (key_sync[0])
+      stored_number <= 8'b00000000;
+    else if (key_sync[1])
+      stored_number <= SW[7:0];
 
-// Output dec to 7-segment displays
-reg  [7:0] div_value     [1:0];
-reg        div_load      [1:0];
-wire [7:0] div_result    [1:0];
-wire [7:0] div_remainder [1:0];
-wire       div_ready     [1:0];
-div divider_by10
-(
-  .reset(key_sync[0]),
-  .clk(CLOCK_50),
-  .load(div_load[0]),
-  .value(div_value[0]),
-  .ready(div_ready[0]),
-  .result(div_result[0]),
-  .remainder(div_remainder[0])
-);
-div 
-#(
-  .DIVIDER(100)
-)
-divider_by100
-(
-  .reset(key_sync[0]),
-  .clk(CLOCK_50),
-  .load(div_load[1]),
-  .value(div_value[1]),
-  .ready(div_ready[1]),
-  .result(div_result[1]),
-  .remainder(div_remainder[1])
-);
-always @(posedge CLOCK_50)
-  if (key_sync[0])
-  begin
-    numbers[0] <= 8'b00000000;
-    numbers[1] <= 8'b00000000;
-    numbers[2] <= 8'b00000000;
-    numbers[3] <= 8'b00000000;
-    numbers[4] <= 8'b00000000;
-    div_load[0] <= 1'b0;
-    div_load[1] <= 1'b0;
-  end
-  else if (key_sync[1])
-  begin
-    div_value[0] <= SW[7:0];
-    div_value[1] <= SW[7:0];
-    div_load[1] <= 1'b1;
-    div_load[1] <= 1'b1;
-    numbers[3] <= SW[3:0];
-    numbers[4] <= SW[7:4];
-  end
-  else if (div_ready[0])
-    numbers[2] <= div_result[1];
-  else if (div_ready[1])
-  begin
-    numbers[0] <= div_remainder[0];
-    numbers[1] <= div_result[0];
-  end
+  // Notation module instance
+  notation 
+  not_instance
+  (
+    .clk(CLOCK_50),
+    .reset(key_sync[0] | key_sync[1]),
+    .number(stored_number), 
+    .digits(dec_digits),
+    .conversion_done(conversion_done)
+  );
 endmodule
