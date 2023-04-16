@@ -1,13 +1,50 @@
 #!/bin/bash
 
-# Set the list of extensions to keep
-extensions=(c v sh qpf qsf md)
+# list of file extensions to keep
+keep_ext=("v" "c" "sh" "md" "qpf" "qsf" "py")
 
-# Construct a list of file patterns that match the extensions
-patterns=$(printf " ! -name '*.%s'" "${extensions[@]}")
+# list of files to exclude
+exclude_files=(".gitignore")
 
-# Find and delete all files whose extensions do not match the list
-eval "find . -type f \( $patterns \) -print0 | xargs -0 rm -f"
+# list of directories to exclude
+exclude_dirs=(".git")
 
-# Find and remove all empty directories
-find . -type d -empty -delete
+# function to check if a file should be deleted
+should_delete() {
+    local file="$1"
+    local ext="${file##*.}"
+    if [[ -f "$file" && ! " ${keep_ext[@]} " =~ " $ext " ]]; then
+        return 0
+    else
+        return 1
+    fi
+}
+
+# function to delete files recursively
+delete_files() {
+    local dir="$1"
+    local exclude_args=""
+    for item in "${exclude_files[@]}"; do
+        exclude_args+=" ! -path \"$dir/$item\""
+    done
+    for item in "${exclude_dirs[@]}"; do
+        exclude_args+=" ! -path \"$dir/$item/*\" ! -path \"$dir/$item\""
+    done
+    eval find "$dir" -type f $exclude_args -print0 | while read -d $'\0' file; do
+        if should_delete "$file"; then
+            rm "$file"
+            echo "Deleted file: $file"
+        fi
+    done
+    # delete empty directories
+    eval find "$dir" -type d -empty $exclude_args | while read dir; do
+      echo "Deleted dir: $dir"
+      rmdir "$dir"
+    done
+}
+
+# run the script on each directory specified
+for dir in "."; do
+    delete_files "$dir"
+done
+
