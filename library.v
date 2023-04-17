@@ -55,6 +55,35 @@ module sevseg
   assign digit   = ~lut[number];
 endmodule
 
+module notation_self_reset
+#(
+  parameter BIT_DEPTH = 8,
+  parameter NUM_DIGITS = 3,
+  parameter BASE = 10
+)
+(
+  input  wire clk,                  
+  input  wire reset,                
+  input  wire [BIT_DEPTH-1:0] number, 
+  output wire [(NUM_DIGITS * BIT_DEPTH)-1:0] digits
+);
+  wire conversion_done;
+  notation
+  #(
+    .BIT_DEPTH(BIT_DEPTH),
+    .NUM_DIGITS(NUM_DIGITS),
+    .BASE(BASE)
+  )
+  notation_inst
+  (
+    .clk(clk),
+    .reset(reset | conversion_done),
+    .number(number),
+    .digits(digits),
+    .conversion_done(conversion_done)
+  );
+endmodule
+
 // --------------------------------------------------------------------------------
 // Module: notation
 // Author: GPT-4

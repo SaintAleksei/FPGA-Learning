@@ -4,6 +4,114 @@
 
 `include "../library.v"
 
+module stopwatch
+#(
+  // TODO
+)
+(
+  // TODO
+);
+  genvar i;
+
+  // Registers required by device logic
+  reg [13:0] saved_time [MEM_SIZE:0];
+  reg [13:0] temporary_result;
+  reg [7:0] saved_time_idx;
+  reg start;
+
+  generate
+    for (i = 0; i < MAIN_DIGITS; i = i + 1)
+      assign main_result[i]
+  endgenerate
+
+  // Device logic
+  always @(posedge clk)
+  begin
+    if (key_sync[0]) // Reset
+    begin
+      generate
+        for (i = 0; i <= MEM_SIZE; i++)
+        begin: saved_time_reset_loop
+          saved_time[i] <= 14'd0;
+        end
+      endgenerate
+      saved_time_idx <= 0;
+      start <= 0;
+    end
+    else if (key_sync[1]) // Start / Stop
+    begin
+      start <= ~start;
+      saved_time_idx <= {8{~start}} & saved_time_idx;
+    end
+    else if (key_sync[2]) // Write
+    begin
+      if (start)
+      begin
+        if (saved_time_idx < MEM_SIZE)
+        begin
+          saved_time[saved_time_idx + 1] <= saved_time[0];
+          saved_time_idx <= saved_time_idx + 1;
+        end 
+
+        temporary_result <= saved_time[0];
+      end
+      else if (!start)
+      begin
+        generate
+          for (i = 0; i < MEM_SIZE; i++)
+          begin: saved_time_write_loop
+            saved_time[i+1] = 14'd0;
+          end
+        endgenerate
+      end
+    end
+    else if (key_sync[3] && !start) // Show
+      saved_time_idx <= saved_time_idx + 1;
+
+    if (timer_event && start)
+      saved_time[0] = saved_time[0] + 1;
+  end
+      
+  // Submodules instantiation
+  notation_self_reset
+  current_time_notation
+  #(
+    .BIT_DEPTH(14),
+    .NUM_DIGITS(4),
+    .BASE(10)
+  (
+    .clk(CLOCK_50),
+    .reset(key_sync[0]),
+    .number(saved_time[saved_time_idx]),
+    .digits({numbers[3], numbers[2], numbers[1], numbers[0]}),
+  );
+
+  notation_self_reset
+  temporary_result_notation
+  #(
+    .BIT_DEPTH(14),
+    .NUM_DIGITS(2),
+    .BASE(10)
+  (
+    .clk(CLOCK_50),
+    .reset(key_sync[0]),
+    .number(temporary_result),
+    .digits({numbers[5], numbers[4]}),
+  );
+
+  wire timer_event;
+  timer
+  timer_inst
+  (
+    .clk(CLOCK_50),
+    .reset(key_sync[0] | timer_event),
+    // Generate timer event every 0.1 second
+    .cmp_val(CLOCK_FREQ / 10 - 1),
+    .cmp_flag(timer_event)
+  );
+  
+)
+
 module de2_115
 (
   input  wire        CLOCK_50, // Clock
@@ -20,6 +128,9 @@ module de2_115
   output wire [6:0]  HEX6,
   output wire [6:0]  HEX7
 );
+  parameter MEM_SIZE   = 4;
+  parameter CLOCK_FREQ = 50000000; // 50 MHz
+  
   // 4 buttons sychronization
   wire [3:0] key_pressed;
   de2_115_buttons
@@ -54,55 +165,97 @@ module de2_115
   assign HEX6 = SEVSEG_OFF;
   assign HEX7 = SEVSEG_OFF;
 
-  reg [9:0] current_time;
-  reg [6:0] saved_time [3:0];
-  reg [1:0] saved_time_idx;
-  reg convert_current_time;
-  reg convert_saved_time;
-  wire current_time_done;
-  wire saved_time_done;
+  // Registers required by device logic
+  reg [13:0] saved_time [MEM_SIZE:0];
+  reg [13:0] temporary_result;
+  reg [7:0] saved_time_idx;
+  reg start;
 
+  genvar i;
+
+  // Device logic
   always @(posedge clk)
   begin
-    if (key_sync[0])
-      // TODO
-    else if (key_sync[1])
-      // TODO
-    else if (key_sync[2])
-      // TODO
+    if (key_sync[0]) // Reset
+    begin
+      generate
+        for (i = 0; i <= MEM_SIZE; i++)
+        begin: saved_time_reset_loop
+          saved_time[i] <= 14'd0;
+        end
+      endgenerate
+      saved_time_idx <= 0;
+      start <= 0;
+    end
+    else if (key_sync[1]) // Start / Stop
+    begin
+      start <= ~start;
+      saved_time_idx <= {8{~start}} & saved_time_idx;
+    end
+    else if (key_sync[2]) // Write
+    begin
+      if (start)
+      begin
+        if (saved_time_idx < MEM_SIZE)
+        begin
+          saved_time[saved_time_idx + 1] <= saved_time[0];
+          saved_time_idx <= saved_time_idx + 1;
+        end 
 
-    if (current_time_done)
-      // TODO
-    if (saved_time_done)
-      // TODO
+        temporary_result <= saved_time[0];
+      end
+      else if (!start)
+      begin
+        generate
+          for (i = 0; i < MEM_SIZE; i++)
+          begin: saved_time_write_loop
+            saved_time[i+1] = 14'd0;
+          end
+        endgenerate
+      end
+    end
+    else if (key_sync[3] && !start) // Show
+      saved_time_idx <= saved_time_idx + 1;
+
+    if (timer_event && start)
+      saved_time[0] = saved_time[0] + 1;
   end
       
-
-  notation 
-  current_time
+  // Submodules instantiation
+  notation_self_reset
+  current_time_notation
   #(
-    .BIT_DEPTH(10),
+    .BIT_DEPTH(14),
     .NUM_DIGITS(4),
     .BASE(10)
   (
     .clk(CLOCK_50),
-    .reset(key_sync[0] | convert_current_time),
-    .number(current_time),
+    .reset(key_sync[0]),
+    .number(saved_time[saved_time_idx]),
     .digits({numbers[3], numbers[2], numbers[1], numbers[0]}),
-    .conversion_done(current_time_done)
   );
 
-  notation
-  saved_time
+  notation_self_reset
+  temporary_result_notation
   #(
-    .BIT_DEPTH(7),
+    .BIT_DEPTH(14),
     .NUM_DIGITS(2),
     .BASE(10)
   (
     .clk(CLOCK_50),
-    .reset(key_sync[0] | convert_saved_time),
-    .number(current_time),
+    .reset(key_sync[0]),
+    .number(temporary_result),
     .digits({numbers[5], numbers[4]}),
-    .conversion_done(saved_time_done)
+  );
+
+  wire timer_event;
+  timer
+  timer_inst
+  (
+    .clk(CLOCK_50),
+    .reset(key_sync[0] | timer_event),
+    // Generate timer event every 0.1 second
+    .cmp_val(CLOCK_FREQ / 10 - 1),
+    .cmp_flag(timer_event)
   );
 endmodule
