@@ -1,3 +1,22 @@
+module timer
+#(
+  parameter BIT_DEPTH = 32,
+)
+(
+  input  wire clk,
+  input  wire reset,
+  input  wire [BIT_DEPTH-1:0] cmp_val,
+  output reg  [BIT_DEPTH-1:0] cnt_val,
+  output wire cmp_flag
+)
+  assign cmp_flag = cnt_val >= cmp_val;
+  always @(posedge clk)
+    if (reset)
+      cnt_val <= 0;
+    else
+      cnt_val = cnt_val + 1;
+endmodule
+
 // Convert 4-bit number to hexadecimal representation for 7-segment dispay
 // TODO: In fact, it is Lookup Table, maybe it can be separate parameterizable module
 module sevseg
