@@ -32,13 +32,13 @@ delete_files() {
     done
     eval find "$dir" -type f $exclude_args -print0 | while read -d $'\0' file; do
         if should_delete "$file"; then
+            echo "Delete file: $file"
             rm "$file"
-            echo "Deleted file: $file"
         fi
     done
     # delete empty directories
     eval find "$dir" -type d -empty $exclude_args | while read dir; do
-      echo "Deleted dir: $dir"
+      echo "Delete dir: $dir"
       rmdir "$dir"
     done
 }
