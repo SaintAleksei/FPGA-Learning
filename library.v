@@ -283,6 +283,42 @@ module division
 endmodule
 
 /*
+ *  Implementation of `notation` module without any registers
+ */
+
+module notation_flash
+#(
+  parameter BIT_DEPTH = 8,          // Bit depth of the input number and output digits
+  parameter NUM_DIGITS = 3,         // Number of digits in the output
+  parameter BASE = 10               // Base of the output digits
+)
+(
+  input  wire [BIT_DEPTH-1:0] number,                // Input number to be converted
+  output wire [(NUM_DIGITS * BIT_DEPTH)-1:0] digits  // Output digits as a single wire
+);
+  wire [BIT_DEPTH-1:0] dividend_helpers [NUM_DIGITS:0];
+  assign dividend_helpers[0] = number;
+
+  genvar i;
+  generate
+    for (i = 0; i < NUM_DIGITS; i = i + 1)
+    begin: notation_flash_loop
+      division_flash
+      #(
+        .BIT_DEPTH(BIT_DEPTH)
+      ) 
+      div
+      (
+        .dividend(dividend_helpers[i]),
+        .divisor(BASE[BIT_DEPTH-1:0]),
+        .quotient(dividend_helpers[i+1]),
+        .remainder(digits[(BIT_DEPTH * (i + 1)) - 1: BIT_DEPTH * i])
+      );
+    end
+  endgenerate
+endmodule
+
+/*
  *  Implementation of `division` module without any registers
  */
 
@@ -295,13 +331,15 @@ module division_flash
   input wire  [BIT_DEPTH-1:0] divisor,     // Divisor input
   output wire [BIT_DEPTH-1:0] quotient,    // Quotient output
   output wire [BIT_DEPTH-1:0] remainder,   // Remainder output
-  output wire exception // TODO 
+  output wire exception                    // Division by zero exception
 );
-  wire [BIT_DEPTH*2-1:0] ext_remainder_shifted [BIT_DEPTH-1:0];
-  wire [BIT_DEPTH-1:0]   remainder_shifted     [BIT_DEPTH-1:0];
-  wire [BIT_DEPTH-1:0]   remainder_step        [BIT_DEPTH-1:0];
-  wire [BIT_DEPTH*2-1:0] ext_remainder_step    [BIT_DEPTH-1:0];
-  wire [BIT_DEPTH-1:0]   quotient_step         [BIT_DEPTH-1:0];
+  assign exception = (divisor == 0);
+
+  wire [BIT_DEPTH*2-1:0] ext_remainder_shifted [BIT_DEPTH-1:0]; // Stores left-shift value of previous extended remainder
+  wire [BIT_DEPTH-1:0]   remainder_shifted     [BIT_DEPTH-1:0]; // Stores left-shift value of previous remainder
+  wire [BIT_DEPTH-1:0]   remainder_step        [BIT_DEPTH-1:0]; // Stores value of current remainder
+  wire [BIT_DEPTH*2-1:0] ext_remainder_step    [BIT_DEPTH-1:0]; // Stores value of current extended remainder
+  wire [BIT_DEPTH-1:0]   quotient_step         [BIT_DEPTH-1:0]; // Stores value of current quotient
 
   assign ext_remainder_shifted[0]  = {{BIT_DEPTH{1'b0}}, dividend} << 1;
   assign remainder_shifted[0]      = ext_remainder_shifted[0][BIT_DEPTH*2-1:BIT_DEPTH];
@@ -319,7 +357,7 @@ module division_flash
       assign remainder_step[i]        = (remainder_shifted[i][BIT_DEPTH-1]) ? remainder_shifted[i] + divisor :
                                                                               remainder_shifted[i] - divisor;
       assign ext_remainder_step[i]    = {remainder_step[i], ext_remainder_shifted[i][BIT_DEPTH-1:0]};
-      assign quotient_step[i]         = {quotient_step[i-1][BIT_DEPTH-2:0], ~remainder_step[BIT_DEPTH-1]};
+      assign quotient_step[i]         = {quotient_step[i-1][BIT_DEPTH-2:0], ~remainder_step[i][BIT_DEPTH-1]};
     end
   endgenerate
 

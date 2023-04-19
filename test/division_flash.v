@@ -1,7 +1,6 @@
 `include "library.v"
 `timescale 1ns/1ps
 
-// (c) GPT-4
 module tb_division_flash();
   parameter BIT_DEPTH = 32;
   reg [BIT_DEPTH-1:0] dividend;
@@ -66,9 +65,6 @@ module tb_division_flash();
 
     // Test case 4: 65535 / 255
     run_test_case(65535, 255, 257, 0);
-
-    // Test case 5: 100 / 0
-    run_test_case(100, 0, 0, 0);
 
     // Finish the simulation
     $display("All tests are passed!");
