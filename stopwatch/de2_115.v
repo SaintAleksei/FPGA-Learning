@@ -6,10 +6,11 @@
 
 module stopwatch
 #(
-  parameter MEM_IDX_BIT_DEPTH = 2,
-  parameter BIT_DEPTH         = 8,
-  parameter MEM_SIZE          = 1 << MEM_IDX_BIT_DEPTH
+  parameter MEM_ADDR_BIT_DEPTH = 2,
+  parameter BIT_DEPTH          = 8,
+  parameter MEM_SIZE           = 1 << MEM_ADDR_BIT_DEPTH
 (
+)
   input  wire clk,
   input  wire reset,
   input  wire start_stop,
@@ -18,9 +19,9 @@ module stopwatch
   output wire [BIT_DEPTH-1:0] current;
   output wire [BIT_DEPTH-1:0] temporary;
 );
-  reg [BIT_DEPTH-1:0]         saved_time [MEMORY_SIZE:0];
-  reg [BIT_DEPTH-1:0]         temporary_time;
-  reg [MEM_IDX_BIT_DEPTH-1:0] idx;
+  reg [BIT_DEPTH-1:0]          saved_time [MEM_SIZE:0];
+  reg [BIT_DEPTH-1:0]          temporary_time;
+  reg [MEM_ADDR_BIT_DEPTH-1:0] idx;
   reg start;
   assign current   = saved_time[idx];
   assign temporary = temporary_time;
@@ -81,7 +82,6 @@ module de2_115
   output wire [6:0]  HEX1,
   output wire [6:0]  HEX2,
   output wire [6:0]  HEX3,
-  output wire [6:0]  HEX4,
   output wire [6:0]  HEX5,
   output wire [6:0]  HEX6,
   output wire [6:0]  HEX7
@@ -123,67 +123,14 @@ module de2_115
   assign HEX6 = SEVSEG_OFF;
   assign HEX7 = SEVSEG_OFF;
 
-  // Registers required by device logic
-  reg [13:0] saved_time [MEM_SIZE:0];
-  reg [13:0] temporary_result;
-  reg [7:0] saved_time_idx;
-  reg start;
+  wire [15:0] current_time;
+  wire [15:0] temporary_time;
 
-  genvar i;
-
-  // Device logic
-  always @(posedge clk)
-  begin
-    if (key_sync[0]) // Reset
-    begin
-      generate
-        for (i = 0; i <= MEM_SIZE; i++)
-        begin: saved_time_reset_loop
-          saved_time[i] <= 14'd0;
-        end
-      endgenerate
-      saved_time_idx <= 0;
-      start <= 0;
-    end
-    else if (key_sync[1]) // Start / Stop
-    begin
-      start <= ~start;
-      saved_time_idx <= {8{~start}} & saved_time_idx;
-    end
-    else if (key_sync[2]) // Write
-    begin
-      if (start)
-      begin
-        if (saved_time_idx < MEM_SIZE)
-        begin
-          saved_time[saved_time_idx + 1] <= saved_time[0];
-          saved_time_idx <= saved_time_idx + 1;
-        end 
-
-        temporary_result <= saved_time[0];
-      end
-      else if (!start)
-      begin
-        generate
-          for (i = 0; i < MEM_SIZE; i++)
-          begin: saved_time_write_loop
-            saved_time[i+1] = 14'd0;
-          end
-        endgenerate
-      end
-    end
-    else if (key_sync[3] && !start) // Show
-      saved_time_idx <= saved_time_idx + 1;
-
-    if (timer_event && start)
-      saved_time[0] = saved_time[0] + 1;
-  end
-      
   // Submodules instantiation
   notation_self_reset
-  current_time_notation
+  current_time_notation // Output current time
   #(
-    .BIT_DEPTH(14),
+    .BIT_DEPTH(16),
     .NUM_DIGITS(4),
     .BASE(10)
   (
@@ -194,9 +141,9 @@ module de2_115
   );
 
   notation_self_reset
-  temporary_result_notation
+  temporary_time_notation // Output temprary time
   #(
-    .BIT_DEPTH(14),
+    .BIT_DEPTH(16),
     .NUM_DIGITS(2),
     .BASE(10)
   (
