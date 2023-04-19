@@ -1,6 +1,6 @@
 module timer
 #(
-  parameter BIT_DEPTH = 32,
+  parameter BIT_DEPTH = 32
 )
 (
   input  wire clk,
@@ -8,8 +8,8 @@ module timer
   input  wire [BIT_DEPTH-1:0] cmp_val,
   output reg  [BIT_DEPTH-1:0] cnt_val,
   output wire cmp_flag
-)
-  assign cmp_flag = cnt_val >= cmp_val;
+);
+  assign cmp_flag = (cnt_val >= cmp_val);
   always @(posedge clk)
     if (reset)
       cnt_val <= 0;
@@ -35,7 +35,7 @@ module sevseg
     3
 */
 // FIXME: How much time is needed for this initialization?
-//                  6543210
+//                    6543210
   assign lut[0]  = 7'b0111111;
   assign lut[1]  = 7'b0000110;
   assign lut[2]  = 7'b1011011;
@@ -199,15 +199,15 @@ module division #(parameter BIT_DEPTH = 32)(
   assign remainder = temp[BIT_DEPTH*2-1:BIT_DEPTH]; 
 
   // Some helpfull wires to make always block more clear
-  wire [BIT_DEPTH*2-1:0] temp_shifted      = temp << 1;
+  wire [BIT_DEPTH*2-1:0] temp_shifted        = temp << 1;
   wire [BIT_DEPTH-1:0]   remainder_shifted   = temp_shifted[BIT_DEPTH*2-1:BIT_DEPTH];
   wire [BIT_DEPTH-1:0]   remainder_new_step  = (remainder_shifted[BIT_DEPTH-1]) ? remainder_shifted + divisor :
-                                          remainder_shifted - divisor;
+                                                                                  remainder_shifted - divisor;
   wire [BIT_DEPTH-1:0]   remainder_last_step = (remainder_new_step[BIT_DEPTH-1]) ? remainder_new_step + divisor :
-                                           remainder_new_step;
-  wire [BIT_DEPTH*2-1:0] temp_init   = {{BIT_DEPTH{1'b0}}, dividend_in};
-  wire [BIT_DEPTH*2-1:0] temp_new    = {remainder_new_step,  temp_shifted[BIT_DEPTH-1:0]};
-  wire [BIT_DEPTH*2-1:0] temp_last   = {remainder_last_step, temp_shifted[BIT_DEPTH-1:0]};
+                                                                                   remainder_new_step;
+  wire [BIT_DEPTH*2-1:0] temp_init     = {{BIT_DEPTH{1'b0}}, dividend_in};
+  wire [BIT_DEPTH*2-1:0] temp_new      = {remainder_new_step,  temp_shifted[BIT_DEPTH-1:0]};
+  wire [BIT_DEPTH*2-1:0] temp_last     = {remainder_last_step, temp_shifted[BIT_DEPTH-1:0]};
   wire [BIT_DEPTH-1:0]   quotient_new  = {quotient[BIT_DEPTH-2:0], ~remainder_new_step[BIT_DEPTH-1]};
 
   // The always block is sensitive to the rising edge of the clock and reset signals.
@@ -215,18 +215,18 @@ module division #(parameter BIT_DEPTH = 32)(
     // When the reset signal is high, initialize all internal registers and outputs to 0.
     if (reset) begin
       quotient <= 0;
-      temp <= 0;
-      count <= 0;
-      done <= 0;
-      divisor <= 0;
+      temp     <= 0;
+      count    <= 0;
+      done     <= 0;
+      divisor  <= 0;
     end else if (start) begin // When the start signal is high, begin the division process.
       if (count == 0 && !done) begin // When the counter is 0, initialize registers with started values
         temp <= temp_init;
         if (divisor_in == 0) begin
           quotient <= 0;
-          done   <= 1;
+          done     <= 1;
         end else begin
-          count  <= BIT_DEPTH;
+          count    <= BIT_DEPTH;
           divisor  <= divisor_in;
         end
       end else if (!done) begin // In other steps of the division process:
@@ -241,7 +241,7 @@ module division #(parameter BIT_DEPTH = 32)(
         // Update quotient
         quotient <= quotient_new;
         // Decrement the counter.
-        count <= count - 1;
+        count    <= count - 1;
       end
     end else begin // If the start signal is low, set the done signal to 0.
       done <= 0;
@@ -289,7 +289,7 @@ module de2_115_buttons
   parameter BUTTONS_AMOUNT = 4
 )
 (
-  input  wire       clk,
+  input  wire clk,
   input  wire [BUTTONS_AMOUNT-1:0] buttons,
   output wire [BUTTONS_AMOUNT-1:0] sync,
   output wire [BUTTONS_AMOUNT-1:0] pressed,
@@ -339,13 +339,13 @@ module shiftreg
   parameter BIT_DEPTH = 8
 )
 (
-  input  clk,
-  input  reset,
-  input  left_shift_bit,
-  input  left_shift_event,
-  input  right_shift_bit,
-  input  right_shift_event,
-  output reg [BIT_DEPTH-1:0] register 
+  input  wire clk,
+  input  wire reset,
+  input  wire left_shift_bit,
+  input  wire left_shift_event,
+  input  wire right_shift_bit,
+  input  wire right_shift_event,
+  output reg  [BIT_DEPTH-1:0] register 
 );
   always @(posedge clk)
     if (reset)

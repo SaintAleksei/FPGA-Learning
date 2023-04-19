@@ -4,6 +4,71 @@
 
 `include "../library.v"
 
+module stopwatch
+#(
+  parameter MEM_IDX_BIT_DEPTH = 2,
+  parameter BIT_DEPTH         = 8,
+  parameter MEM_SIZE          = 1 << MEM_IDX_BIT_DEPTH
+(
+  input  wire clk,
+  input  wire reset,
+  input  wire start_stop,
+  input  wire write,
+  input  wire show,
+  output wire [BIT_DEPTH-1:0] current;
+  output wire [BIT_DEPTH-1:0] temporary;
+);
+reg [BIT_DEPTH-1:0]         saved_time [MEMORY_SIZE:0];
+reg [BIT_DEPTH-1:0]         temporary_time;
+reg [MEM_IDX_BIT_DEPTH-1:0] idx;
+reg start;
+assign current   = saved_time[idx];
+assign temporary = temporary_time;
+genvar i;
+always @(posedge clk)
+begin
+  if (reset)
+  begin
+    generate 
+      for (i = 0; i <= MEMORY_SIZE; i = i + 1)
+      begin: stopwatch_reset_loop
+        saved_time[i] <= 0;
+      end
+    endgenerate
+    temporary <= 0;
+    start     <= 0;
+    idx       <= 0;
+  end
+  else if (start_stop)
+  begin
+    start <= ~start;
+    idx   <= 0;
+  end
+  else if (write)
+    if (start && idx < MEMORY_SIZE) // Save new time into memory
+    begin
+      temporary_time      = saved_time[0];
+      saved_time[idx + 1] = saved_time[0];
+      idx                 = idx + 1;
+    end
+
+    if (!start) // Clear memory
+    begin
+      generate
+        for (i = 0; i < MEMORY_SIZE; i = i + 1)
+        begin: stopwatch_clear_memory_loop
+          saved_time[i + 1] <= 0;
+        end
+      endgenerate
+    end
+  else if (show && !start)
+    // TODO
+    idx <= idx + 1;
+
+  if (timer_event)
+    saved_time[0] = saved_time[0] + 1;
+end
+
 module de2_115
 (
   input  wire        CLOCK_50, // Clock
