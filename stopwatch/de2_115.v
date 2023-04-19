@@ -1,5 +1,7 @@
 /*
- * Template file that can be used in many projects
+ *  Task #7
+ *  Goal is to create stopwatch device. It counts time with 0.1 second accuracy and 
+ * have memory for storing results. Additionaly it have output of temporary result.
  */
 
 `include "../library.v"
@@ -8,67 +10,81 @@ module stopwatch
 #(
   parameter MEM_ADDR_BIT_DEPTH = 2,
   parameter BIT_DEPTH          = 8,
-  parameter MEM_SIZE           = 1 << MEM_ADDR_BIT_DEPTH
-(
+  parameter CLOCK_FREQ         = 50000000 // 50 MHz
 )
+(
   input  wire clk,
   input  wire reset,
   input  wire start_stop,
   input  wire write,
   input  wire show,
-  output wire [BIT_DEPTH-1:0] current;
-  output wire [BIT_DEPTH-1:0] temporary;
+  output wire [BIT_DEPTH-1:0] current,
+  output reg  [BIT_DEPTH-1:0] temporary
 );
-  reg [BIT_DEPTH-1:0]          saved_time [MEM_SIZE:0];
-  reg [BIT_DEPTH-1:0]          temporary_time;
-  reg [MEM_ADDR_BIT_DEPTH-1:0] idx;
+  parameter MEM_SIZE = 1 << MEM_ADDR_BIT_DEPTH;
+
+  // Memory registers
+  reg [BIT_DEPTH-1:0] saved_time [MEM_SIZE:0];
+  // Memory read/write idx
+  reg [MEM_ADDR_BIT_DEPTH-1:0] mem_idx;
+  // Memory show idx
+  reg [MEM_ADDR_BIT_DEPTH-1:0] show_idx;
   reg start;
-  assign current   = saved_time[idx];
-  assign temporary = temporary_time;
-  genvar i;
+
+  // Assign current value
+  assign current = saved_time[show_idx];
+
+  // Device logic
+  integer i;
   always @(posedge clk)
   begin
     if (reset)
     begin
-      generate 
-        for (i = 0; i <= MEMORY_SIZE; i = i + 1)
-        begin: stopwatch_reset_loop
-          saved_time[i] <= 0;
-        end
-      endgenerate
-      temporary <= 0;
-      start     <= 0;
-      idx       <= 0;
+      for (i = 0; i <= MEM_SIZE; i = i + 1)
+        saved_time[i] <= 0;
+      temporary  <= 0;
+      start      <= 0;
+      mem_idx    <= 0;
+      show_idx   <= 0;
     end
     else if (start_stop)
     begin
-      start <= ~start;
-      idx   <= 0;
+      start     <= ~start;
+      mem_idx   <= 0;
+      show_idx  <= 0;
     end
     else if (write)
-      if (start && idx < MEMORY_SIZE) // Save new time into memory
+      if (start && mem_idx < MEM_SIZE) // Save new time into memory if running 
       begin
-        temporary_time      = saved_time[0];
-        saved_time[idx + 1] = saved_time[0];
-        idx                 = idx + 1;
+        saved_time[mem_idx + 1] <= saved_time[0];
+        mem_idx                 <= mem_idx + 1;
       end
 
-      if (!start) // Clear memory
-      begin
-        generate
-          for (i = 0; i < MEMORY_SIZE; i = i + 1)
-          begin: stopwatch_clear_memory_loop
-            saved_time[i + 1] <= 0;
-          end
-        endgenerate
-      end
-    else if (show && !start)
-      // TODO
-      idx <= idx + 1;
+      temporary <= saved_time[0]; // Update temporary time
+
+      if (!start) // Clear memory if not running
+        for (i = 1; i <= MEM_SIZE; i = i + 1)
+          saved_time[i] <= 0;
+    else if (show && !start) // Show memory if not running
+      show_idx <= (show_idx < MEM_SIZE) ? show_idx + 1 : 0;
 
     if (timer_event)
-      saved_time[0] = saved_time[0] + 1;
+      saved_time[0] <= saved_time[0] + 1;
   end
+
+  // Timer module instance
+  wire timer_event;
+  timer
+  #(
+    .BIT_DEPTH(23)
+  )
+  timer_inst
+  (
+    .clk(clk),
+    .reset(reset | timer_event),
+    .cmp_val(CLOCK_FREQ / 10 - 1),
+    .cmp_flag(timer_event)
+  );
 endmodule
 
 module de2_115
@@ -83,10 +99,10 @@ module de2_115
   output wire [6:0]  HEX2,
   output wire [6:0]  HEX3,
   output wire [6:0]  HEX5,
+  output wire [6:0]  HEX4,
   output wire [6:0]  HEX6,
   output wire [6:0]  HEX7
 );
-  parameter MEM_SIZE   = 4;
   parameter CLOCK_FREQ = 50000000; // 50 MHz
   
   // 4 buttons sychronization
@@ -100,7 +116,6 @@ module de2_115
   );
 
   // 7-segment displays connection
-  parameter SEVSEG_OFF = 7'b1111111;
   wire [6:0] digits  [7:0];
   wire [3:0] numbers [7:0];
   genvar i;
@@ -114,53 +129,69 @@ module de2_115
       );
     end
   endgenerate
+  parameter SEVSEG_OFF = 7'b1111111;
   assign HEX0 = SEVSEG_OFF;
   assign HEX1 = digits[1];
   assign HEX2 = digits[2];
   assign HEX3 = digits[3];
   assign HEX4 = digits[4];
-  assign HEX5 = digits[5];
-  assign HEX6 = SEVSEG_OFF;
+  assign HEX5 = digits[5]; 
+  assign HEX6 = SEVSEG_OFF; 
   assign HEX7 = SEVSEG_OFF;
 
+  // Stopwatch module instantiation
   wire [15:0] current_time;
   wire [15:0] temporary_time;
+  stopwatch
+  #(
+    .CLOCK_FREQ(CLOCK_FREQ),
+    .BIT_DEPTH(16)
+  )
+  stopwatch_inst
+  (
+    .clk(CLOCK_50),
+    .reset(key_pressed[0]),
+    .start_stop(key_pressed[1]),
+    .write(key_pressed[2]),
+    .show(key_pressed[3]),
+    .current(current_time),
+    .temporary(temporary_time)
+  );
 
-  // Submodules instantiation
-  notation_self_reset
-  current_time_notation // Output current time
+  // Notation modules instantiation
+  notation_flash
   #(
     .BIT_DEPTH(16),
     .NUM_DIGITS(4),
     .BASE(10)
+  )
+  current_time_notation // Output current time
   (
-    .clk(CLOCK_50),
-    .reset(key_sync[0]),
-    .number(saved_time[saved_time_idx]),
-    .digits({numbers[3], numbers[2], numbers[1], numbers[0]}),
+    .number(current_time),
+    .digits({numbers[3], numbers[2], numbers[1], numbers[0]})
   );
 
-  notation_self_reset
-  temporary_time_notation // Output temprary time
+  wire temporary_time_div_10;
+  division_flash
+  #(
+    .BIT_DEPTH(16)
+  )
+  div_temporary_time
+  (
+    .dividend(temporary_time),
+    .divisor(16'd10),
+    .quotient(temporary_time_div_10),
+  );
+
+  notation_flash
   #(
     .BIT_DEPTH(16),
     .NUM_DIGITS(2),
     .BASE(10)
+  )
+  temporary_time_notation // Output temprary time
   (
-    .clk(CLOCK_50),
-    .reset(key_sync[0]),
-    .number(temporary_result),
-    .digits({numbers[5], numbers[4]}),
-  );
-
-  wire timer_event;
-  timer
-  timer_inst
-  (
-    .clk(CLOCK_50),
-    .reset(key_sync[0] | timer_event),
-    // Generate timer event every 0.1 second
-    .cmp_val(CLOCK_FREQ / 10 - 1),
-    .cmp_flag(timer_event)
+    .number(temporary_time_div_10),
+    .digits({numbers[5], numbers[4]})
   );
 endmodule

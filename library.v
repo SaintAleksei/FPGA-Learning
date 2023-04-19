@@ -1,3 +1,41 @@
+/*
+module memory
+#(
+  parameter BIT_DEPTH = 8,
+  parameter ADDR_BIT_DEPTH = 2
+)
+(
+  input  wire clk,
+  input  wire reset,
+  input  wire write,
+  input  wire [ADDR_BIT_DEPTH-1:0] addr,
+  input  wire [BIT_DEPTH-1:0] val2write,
+  output wire [BIT_DEPTH-1:0] val2read
+);
+  parameter MEM_SIZE = 1 << ADDR_BIT_DEPTH;
+
+  // Memory registers
+  reg [(MEM_SIZE * BIT_DEPTH)-1:0] mem_internal;
+
+  // Memory logic
+  always @(posedge clk)
+    if (reset) // Memory reset
+      mem_internal = {BIT_DEPTH * MEM_SIZE{1'b0}};
+    else if (write) // Memory write access
+      mem_internal[(addr + 0) * BIT_DEPTH - 1: addr * BIT_DEPTH] <= val2write;
+
+  // Memory read access
+  assign val2read = mem_array[addr];
+endmodule
+*/
+
+
+/*
+ *            Simple timer module 
+ * `cmp_flag` is high when `cnt_val` >= `cmp_val`
+ * `cnt_val` is increased by one each `clk` tact
+ */
+
 module timer
 #(
   parameter BIT_DEPTH = 32
