@@ -210,19 +210,23 @@ endmodule
 */
 
 // Declare the division module with a parameter named BIT_DEPTH, which represents the bit width of the inputs and outputs.
-module division #(parameter BIT_DEPTH = 32)(
+module division 
+#(
+  parameter BIT_DEPTH = 8
+)
+(
   input wire clk,          // Clock signal input
   input wire reset,        // Reset signal input
   input wire start,        // Start signal input, indicate start of division, should be high during divison process
   output reg done,         // Done signal output, high when division process is completed. Can be reset by reseting start
   input wire  [BIT_DEPTH-1:0] dividend_in, // Dividend input
   input wire  [BIT_DEPTH-1:0] divisor_in,  // Divisor input
-  output reg  [BIT_DEPTH-1:0] quotient,  // Quotient output
-  output wire [BIT_DEPTH-1:0] remainder  // Remainder output
+  output reg  [BIT_DEPTH-1:0] quotient,    // Quotient output
+  output wire [BIT_DEPTH-1:0] remainder    // Remainder output
 );
   // Declare the internal registers needed for the algorithm.
-  reg [BIT_DEPTH*2-1:0] temp;   // Temporary register to store the dividend and partial remainders.
-  reg [BIT_DEPTH-1:0]   count;  // Counter to keep track of the division steps.
+  reg [BIT_DEPTH*2-1:0] temp;     // Temporary register to store the dividend and partial remainders.
+  reg [BIT_DEPTH-1:0]   count;    // Counter to keep track of the division steps.
   reg [BIT_DEPTH-1:0]   divisor;  // Stored divisor, needed to get rid of troubles when divisor_in is changed during algorithm
 
   assign remainder = temp[BIT_DEPTH*2-1:BIT_DEPTH]; 
@@ -248,7 +252,7 @@ module division #(parameter BIT_DEPTH = 32)(
       count    <= 0;
       done     <= 0;
       divisor  <= 0;
-    end else if (start) begin // When the start signal is high, begin the division process.
+    end else if (start) begin        // When the start signal is high, begin the division process.
       if (count == 0 && !done) begin // When the counter is 0, initialize registers with started values
         temp <= temp_init;
         if (divisor_in == 0) begin
@@ -276,6 +280,52 @@ module division #(parameter BIT_DEPTH = 32)(
       done <= 0;
     end
   end
+endmodule
+
+/*
+ *  Implementation of `division` module without any registers
+ */
+
+module division_flash
+#(
+  parameter BIT_DEPTH = 8
+)
+(
+  input wire  [BIT_DEPTH-1:0] dividend,    // Dividend input
+  input wire  [BIT_DEPTH-1:0] divisor,     // Divisor input
+  output wire [BIT_DEPTH-1:0] quotient,    // Quotient output
+  output wire [BIT_DEPTH-1:0] remainder,   // Remainder output
+  output wire exception // TODO 
+);
+  wire [BIT_DEPTH*2-1:0] ext_remainder_shifted [BIT_DEPTH-1:0];
+  wire [BIT_DEPTH-1:0]   remainder_shifted     [BIT_DEPTH-1:0];
+  wire [BIT_DEPTH-1:0]   remainder_step        [BIT_DEPTH-1:0];
+  wire [BIT_DEPTH*2-1:0] ext_remainder_step    [BIT_DEPTH-1:0];
+  wire [BIT_DEPTH-1:0]   quotient_step         [BIT_DEPTH-1:0];
+
+  assign ext_remainder_shifted[0]  = {{BIT_DEPTH{1'b0}}, dividend} << 1;
+  assign remainder_shifted[0]      = ext_remainder_shifted[0][BIT_DEPTH*2-1:BIT_DEPTH];
+  assign remainder_step[0]         = (remainder_shifted[0][BIT_DEPTH-1]) ? remainder_shifted[0] + divisor :
+                                                                           remainder_shifted[0] - divisor;
+  assign ext_remainder_step[0]     = {remainder_step[0], ext_remainder_shifted[0][BIT_DEPTH-1:0]};
+  assign quotient_step[0]          = {BIT_DEPTH{1'b0}};
+
+  genvar i;
+  generate
+    for (i = 1; i < BIT_DEPTH; i = i + 1)
+    begin: division_loop
+      assign ext_remainder_shifted[i] = ext_remainder_step[i-1] << 1;
+      assign remainder_shifted[i]     = ext_remainder_shifted[i][BIT_DEPTH*2-1:BIT_DEPTH];
+      assign remainder_step[i]        = (remainder_shifted[i][BIT_DEPTH-1]) ? remainder_shifted[i] + divisor :
+                                                                              remainder_shifted[i] - divisor;
+      assign ext_remainder_step[i]    = {remainder_step[i], ext_remainder_shifted[i][BIT_DEPTH-1:0]};
+      assign quotient_step[i]         = {quotient_step[i-1][BIT_DEPTH-2:0], ~remainder_step[BIT_DEPTH-1]};
+    end
+  endgenerate
+
+  assign quotient  = quotient_step[BIT_DEPTH-1];
+  assign remainder = (remainder_step[BIT_DEPTH-1][BIT_DEPTH-1]) ? remainder_step[BIT_DEPTH-1] + divisor :
+                                                                  remainder_step[BIT_DEPTH-1];
 endmodule
 
 // simple sync button, legacy. 
