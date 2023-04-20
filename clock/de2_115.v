@@ -40,10 +40,10 @@ module clock
     else if (change_mode) // Change mode
     begin
       conf_mode <= ~conf_mode;
-      conf_pos  <= conf_pos;
+      conf_pos  <= 0;
     end
     else if (change_pos) // Change pos in conf mode
-      conf_pos <= (conf_pos < 3) ? conf_pos + 1 : 0;
+      conf_pos <= (conf_pos < 2) ? conf_pos + 1 : 0;
     else  
     begin // Increment time
       if (inc_seconds)
@@ -53,13 +53,13 @@ module clock
         minutes <= (minutes < 59) ? minutes + 1 : 0;
 
       if (inc_hours)
-        hours   <= (minutes < 23) ? hours + 1 : 0;
+        hours   <= (hours < 23) ? hours + 1 : 0;
     end
   end
 
   timer
   #(
-    .BIT_DEPTH(17) 
+    .BIT_DEPTH(32) 
   )
   timer_inst
   (
@@ -67,7 +67,7 @@ module clock
     .reset(reset | timer_event),
     // Generate event every second
     .cmp_val(CLOCK_FREQ - 1),
-    .cmp_flag(timer_flag)
+    .cmp_flag(timer_event)
   );
 endmodule
 
@@ -102,14 +102,14 @@ module de2_115
 
   // 7-segment displays connection
   wire [6:0] digits  [7:0];
-  wire [3:0] numbers [7:0];
+  wire [7:0] numbers [7:0];
   genvar i;
   generate
     for (i = 0; i < 8; i = i + 1)
     begin: sevseg_loop
       sevseg ss
       (
-        .number(numbers[i]),
+        .number(numbers[i][3:0]),
         .digit(digits[i])
       );
     end
@@ -131,8 +131,9 @@ module de2_115
   #(
     .CLOCK_FREQ(CLOCK_FREQ)
   )
+  clk
   (
-    .clk(clk),
+    .clk(CLOCK_50),
     .reset(key_pressed[0]),
     .change_mode(key_pressed[1]),
     .conf_next(key_pressed[2]),
@@ -178,4 +179,9 @@ module de2_115
     .number(hours),
     .digits({numbers[5], numbers[4]})
   );
+
+  // DEBUG
+  assign LEDG[7:0] = seconds;
+  assign LEDR[7:0] = minutes;
+  assign LEDR[15:8] = hours;
 endmodule
