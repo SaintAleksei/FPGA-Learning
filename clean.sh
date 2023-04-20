@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # list of file extensions to keep
-keep_ext=("v" "c" "sh" "md" "qpf" "qsf" "py")
+keep_ext=("v" "c" "sh" "md" "qpf" "qsf" "py" "ttf")
 
 # list of files to exclude
 exclude_files=(".gitignore")
