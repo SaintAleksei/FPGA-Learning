@@ -23,14 +23,20 @@ module memory
   // Memory registers
   reg [BIT_DEPTH-1:0] mem [MEM_SIZE-1:0];
 
-  // Memory logic
-  integer i;
-  always @(posedge clk)
-    if (reset) // Memory reset
-      for (i = 0; i < MEM_SIZE; i = i + 1)
-        mem[i] <= 0; 
-    else if (write) // Memory write access
-      mem[addr] <= val2write;
+  // Generate memory logic for each register
+  genvar gi;
+  generate
+    for (gi = 0; gi < MEM_SIZE; gi = gi + 1)
+    begin: memory_reg_loop
+      always @(posedge clk)
+      begin
+        if (reset) // Memory reset
+          mem[gi] <= 0;
+        else if (write && addr == gi) // Memory write access
+          mem[gi] <= val2write;
+      end
+    end
+  endgenerate
 
   // Memory read access
   assign val2read = mem[addr];
