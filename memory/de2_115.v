@@ -69,8 +69,12 @@ module de2_115
   (
     .clk(CLOCK_50),
     .reset(key_pressed[0]),
+    .write(key_pressed[1]),
     .addr(SW[17:15]),
     .val2write(SW[7:0]),
     .val2read(mem_wire)
   );
+
+  assign LEDR[7:0] = SW[7:0];
+  assign LEDG[7:0] = mem_wire;
 endmodule
