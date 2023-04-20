@@ -1,4 +1,10 @@
 /*
+ *                Memory module
+ *  One-tact `write` pulse need to write `val2write` 
+ * value at address `addr`. `val2read` always 
+ * represent value at address `addr`
+ */
+
 module memory
 #(
   parameter BIT_DEPTH = 8,
@@ -15,20 +21,20 @@ module memory
   parameter MEM_SIZE = 1 << ADDR_BIT_DEPTH;
 
   // Memory registers
-  reg [(MEM_SIZE * BIT_DEPTH)-1:0] mem_internal;
+  reg [BIT_DEPTH-1:0] mem [MEM_SIZE-1:0];
 
   // Memory logic
+  integer i;
   always @(posedge clk)
     if (reset) // Memory reset
-      mem_internal = {BIT_DEPTH * MEM_SIZE{1'b0}};
+      for (i = 0; i < MEM_SIZE; i = i + 1)
+        mem[i] <= 0; 
     else if (write) // Memory write access
-      mem_internal[(addr + 0) * BIT_DEPTH - 1: addr * BIT_DEPTH] <= val2write;
+      mem[addr] <= val2write;
 
   // Memory read access
-  assign val2read = mem_array[addr];
+  assign val2read = mem[addr];
 endmodule
-*/
-
 
 /*
  *            Simple timer module 
