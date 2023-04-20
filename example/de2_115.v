@@ -20,7 +20,9 @@ module de2_115
   output wire [6:0]  HEX6,
   output wire [6:0]  HEX7
 );
-// 4 buttons sychronization
+  parameter SEVSEG_OFF = 7'b1111111;
+
+  // 4 buttons sychronization
   wire [3:0] key_pressed;
   de2_115_buttons
   buttons
@@ -29,4 +31,27 @@ module de2_115
     .buttons(KEY),
     .pressed(key_pressed)
   );
+
+  // 7-segment displays connection
+  wire [6:0] digits  [7:0];
+  wire [3:0] numbers [7:0];
+  genvar i;
+  generate
+    for (i = 0; i < 8; i = i + 1)
+    begin: sevseg_loop
+      sevseg ss
+      (
+        .number(numbers[i]),
+        .digit(digits[i])
+      );
+    end
+  endgenerate
+  assign HEX0 = SEVSEG_OFF;
+  assign HEX1 = SEVSEG_OFF;
+  assign HEX2 = SEVSEG_OFF;
+  assign HEX3 = SEVSEG_OFF;
+  assign HEX4 = SEVSEG_OFF;
+  assign HEX5 = SEVSEG_OFF;
+  assign HEX6 = SEVSEG_OFF; 
+  assign HEX7 = SEVSEG_OFF;
 endmodule
