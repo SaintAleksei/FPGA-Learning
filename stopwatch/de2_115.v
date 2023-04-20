@@ -1,5 +1,5 @@
 /*
- *  Task #7
+ *  Task #8
  *  Goal is to create stopwatch device. It counts time with 0.1 second accuracy and 
  * have memory for storing results. Additionaly it have output of temporary result.
  */
@@ -8,8 +8,9 @@
 
 module stopwatch
 #(
+  parameter MEM_SIZE           = 4,
   parameter MEM_ADDR_BIT_DEPTH = 2,
-  parameter BIT_DEPTH          = 8,
+  parameter BIT_DEPTH          = 16,
   parameter CLOCK_FREQ         = 50000000 // 50 MHz
 )
 (
@@ -21,14 +22,12 @@ module stopwatch
   output wire [BIT_DEPTH-1:0] current,
   output reg  [BIT_DEPTH-1:0] temporary
 );
-  parameter MEM_SIZE = 1 << MEM_ADDR_BIT_DEPTH;
-
   // Memory registers
   reg [BIT_DEPTH-1:0] saved_time [MEM_SIZE:0];
   // Memory read/write idx
-  reg [MEM_ADDR_BIT_DEPTH-1:0] mem_idx;
+  reg [MEM_ADDR_BIT_DEPTH:0] mem_idx;
   // Memory show idx
-  reg [MEM_ADDR_BIT_DEPTH-1:0] show_idx;
+  reg [MEM_ADDR_BIT_DEPTH:0] show_idx;
   reg start;
 
   // Assign current value
@@ -50,25 +49,30 @@ module stopwatch
     else if (start_stop)
     begin
       start     <= ~start;
-      mem_idx   <= 0;
       show_idx  <= 0;
     end
     else if (write)
+    begin
       if (start && mem_idx < MEM_SIZE) // Save new time into memory if running 
       begin
         saved_time[mem_idx + 1] <= saved_time[0];
         mem_idx                 <= mem_idx + 1;
       end
 
-      temporary <= saved_time[0]; // Update temporary time
+      if (start)
+        temporary <= saved_time[0]; // Update temporary time
 
       if (!start) // Clear memory if not running
+      begin
+        mem_idx <= 0;
         for (i = 1; i <= MEM_SIZE; i = i + 1)
           saved_time[i] <= 0;
+      end
+    end
     else if (show && !start) // Show memory if not running
       show_idx <= (show_idx < MEM_SIZE) ? show_idx + 1 : 0;
 
-    if (timer_event)
+    if (timer_event && start)
       saved_time[0] <= saved_time[0] + 1;
   end
 
@@ -117,20 +121,20 @@ module de2_115
 
   // 7-segment displays connection
   wire [6:0] digits  [7:0];
-  wire [3:0] numbers [7:0];
+  wire [15:0] numbers [7:0];
   genvar i;
   generate
     for (i = 0; i < 8; i = i + 1)
     begin: sevseg_loop
       sevseg ss
       (
-        .number(numbers[i]),
+        .number(numbers[i][3:0]),
         .digit(digits[i])
       );
     end
   endgenerate
   parameter SEVSEG_OFF = 7'b1111111;
-  assign HEX0 = SEVSEG_OFF;
+  assign HEX0 = digits[0];
   assign HEX1 = digits[1];
   assign HEX2 = digits[2];
   assign HEX3 = digits[3];
@@ -144,6 +148,7 @@ module de2_115
   wire [15:0] temporary_time;
   stopwatch
   #(
+    .MEM_SIZE(5),
     .CLOCK_FREQ(CLOCK_FREQ),
     .BIT_DEPTH(16)
   )
@@ -171,7 +176,7 @@ module de2_115
     .digits({numbers[3], numbers[2], numbers[1], numbers[0]})
   );
 
-  wire temporary_time_div_10;
+  wire [15:0] temporary_time_div_10;
   division_flash
   #(
     .BIT_DEPTH(16)
@@ -194,4 +199,8 @@ module de2_115
     .number(temporary_time_div_10),
     .digits({numbers[5], numbers[4]})
   );
+
+  //DEBUG
+  assign LEDG[7:0] = temporary_time;
+  assign LEDR[7:0] = temporary_time_div_10;
 endmodule
