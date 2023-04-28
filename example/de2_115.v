@@ -18,7 +18,14 @@ module de2_115
   output wire [6:0]  HEX4,
   output wire [6:0]  HEX5,
   output wire [6:0]  HEX6,
-  output wire [6:0]  HEX7
+  output wire [6:0]  HEX7,
+  output wire [7:0]  VGA_R,    // VGA
+  output wire [7:0]  VGA_G,
+  output wire [7:0]  VGA_B,
+  output wire        VGA_HS,
+  output wire        VGA_VS,
+  output wire        VGA_BLANK_N,
+  output wire        VGA_SYNC_N
 );
   parameter SEVSEG_OFF = 7'b1111111;
 
