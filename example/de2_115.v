@@ -2,7 +2,9 @@
  * Template file that can be used in many projects
  */
 
-`include "../library.v"
+`ifdef ICARUS_VERILOG
+`include "library.v"
+`endif
 
 module de2_115
 (
