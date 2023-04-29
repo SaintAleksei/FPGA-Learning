@@ -1,3 +1,6 @@
+`ifndef LIBRARY_INCLUDED
+`define LIBRARY_INCLUDED
+
 module vga_text
 #(
   // VGA timings 
@@ -9,16 +12,17 @@ module vga_text
   parameter VER_SYNC_PULSE  = 2,
   parameter VER_BACK_PORCH  = 33,
   parameter VER_RES         = 480,
-
+  
+  // wires and registers bit-depth
   parameter COLOR_BIT_DEPTH = 8,
   parameter HOR_BIT_DEPTH   = 12,
   parameter VER_BIT_DEPTH   = 12,
 
-  parameter FRONT_WIDTH      = 16,
-  parameter FRONT_HEIGH      = 8,
-
-  parameter TEXT_SYMS_PER_LINE    = HOR_RES / FRONT_WIDTH,
-  parameter TEXT_LINES_PER_SCREEN = VER_RES / FRONT_HEIGH
+  // font parameters
+  parameter FONT_WIDTH      = 16,
+  parameter FONT_HEIGHT     = 8,
+  parameter TEXT_SYMS_PER_LINE    = HOR_RES / FONT_WIDTH,
+  parameter TEXT_LINES_PER_SCREEN = VER_RES / FONT_HEIGHT
 )
 (
   // Clock and reset
@@ -75,7 +79,7 @@ module vga_text
   hcnt_div
   (
     .dividend(hcnt),
-    .divisor(FRONT_WIDTH),
+    .divisor(FONT_WIDTH),
     .quotient(hor_sym_cnt),
     .remainder(sym_x)
   );
@@ -87,7 +91,7 @@ module vga_text
   vcnt_div
   (
     .dividend(vcnt),
-    .divisor(FRONT_HEIGH),
+    .divisor(FONT_HEIGHT),
     .quotient(ver_sym_cnt),
     .remainder(sym_y)
   );
@@ -101,7 +105,6 @@ module vga_text
     end
   endgenerate
   
-
   assign sym_code = text_array[hor_sym_cnt + ver_sym_cnt * TEXT_SYMS_PER_LINE];
   
   always @(posedge clk)
@@ -642,3 +645,5 @@ module shiftreg
     else if (right_shift_event)
       register <= {right_shift_bit, register[BIT_DEPTH-1:1]};
 endmodule
+
+`endif
