@@ -5,4 +5,4 @@ if [ -z "$1" ]; then
     exit 1
 fi
 
-iverilog -o testbench -I . $1 && vvp testbench
+iverilog -o testbench -I . -D ICARUS_VERILOG=1 $1 && vvp testbench
