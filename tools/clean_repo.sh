@@ -1,13 +1,13 @@
 #!/bin/bash
 
 # list of file extensions to keep
-keep_ext=("v" "c" "sh" "md" "qpf" "qsf" "py" "ttf")
+keep_ext=("v" "sh" "qpf" "qsf" "py")
 
 # list of files to exclude
-exclude_files=(".gitignore")
+exclude_files=(".gitignore" "README.md" "TODO.txt")
 
 # list of directories to exclude
-exclude_dirs=(".git")
+exclude_dirs=(".git" "playground" "vpi" "font")
 
 # function to check if a file should be deleted
 should_delete() {
