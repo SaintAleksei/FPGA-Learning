@@ -11,14 +11,11 @@ module tb_vga_text;
   wire hsync;
   wire vsync;
 
-  wire [11:0] sym_x;
-  wire [11:0] sym_y;
+  wire [$clog2(`FONT_WIDTH)-1:0]  sym_x;
+  wire [$clog2(`FONT_HEIGHT)-1:0] sym_y;
   wire [7:0] sym_code;
   wire sym_pixel;
   font_rom_wrapper
-  #(
-    .XY_BIT_DEPTH(12)
-  )
   font_rom
   (
     .sym_x(sym_x),
@@ -42,8 +39,7 @@ module tb_vga_text;
   vga_text
   #(
     .FONT_WIDTH(`FONT_WIDTH),
-    .FONT_HEIGHT(`FONT_HEIGHT),
-    .XY_BIT_DEPTH(12)
+    .FONT_HEIGHT(`FONT_HEIGHT)
   )
   vga_text_dut
   (
@@ -51,6 +47,7 @@ module tb_vga_text;
     .reset(reset),
 
     .text(text),
+    .line_offset(4'b0000),
 
     .sym_x(sym_x),
     .sym_y(sym_y),

@@ -15,13 +15,11 @@ module vga_text
   
   // wires and registers bit-depth
   parameter COLOR_BIT_DEPTH = 8,
-  parameter HOR_BIT_DEPTH   = 12,
-  parameter VER_BIT_DEPTH   = 12,
-  parameter XY_BIT_DEPTH    = 8,
 
   // font parameters
   parameter FONT_WIDTH      = 16,
   parameter FONT_HEIGHT     = 8,
+
   parameter TEXT_SYMS_PER_LINE    = HOR_RES / FONT_WIDTH,
   parameter TEXT_LINES_PER_SCREEN = VER_RES / FONT_HEIGHT
 )
@@ -32,12 +30,13 @@ module vga_text
 
   // Text buffer
   input  wire [TEXT_SYMS_PER_LINE * TEXT_LINES_PER_SCREEN * 8 - 1:0] text,
+  input  wire [$clog2(TEXT_LINES_PER_SCREEN)-1:0] line_offset,
   
   // This wires should be connected to font module
   input  wire sym_pixel,
   output wire [7:0] sym_code,
-  output wire [XY_BIT_DEPTH-1:0] sym_x,
-  output wire [XY_BIT_DEPTH-1:0] sym_y,
+  output wire [$clog2(FONT_WIDTH)-1:0] sym_x,
+  output wire [$clog2(FONT_HEIGHT)-1:0] sym_y,
 
   // This wires should be connected to VGA (through COLOT_BIT_DEPTH-bit DAC)
   output wire [COLOR_BIT_DEPTH-1:0] red,
@@ -46,6 +45,8 @@ module vga_text
   output wire hsync,
   output wire vsync
 );
+  //localparam TEXT_SYMS_PER_LINE    = HOR_RES / FONT_WIDTH;
+  //localparam TEXT_LINES_PER_SCREEN = VER_RES / FONT_HEIGHT;
   localparam HOR_BACK_PORCH_START = HOR_SYNC_PULSE;
   localparam HOR_DATA_START = HOR_BACK_PORCH_START + HOR_BACK_PORCH;
   localparam HOR_FRONT_PORCH_START = HOR_DATA_START + HOR_RES;
@@ -54,6 +55,11 @@ module vga_text
   localparam VER_DATA_START = VER_BACK_PORCH_START + VER_BACK_PORCH;
   localparam VER_FRONT_PORCH_START = VER_DATA_START + VER_RES;
   localparam VER_MAX = VER_FRONT_PORCH_START + VER_FRONT_PORCH;
+
+  localparam HOR_BIT_DEPTH = $clog2(HOR_MAX);
+  localparam VER_BIT_DEPTH = $clog2(VER_MAX);
+
+  localparam TEXT_SIZE = TEXT_SYMS_PER_LINE * TEXT_LINES_PER_SCREEN * 8;
 
   reg [HOR_BIT_DEPTH-1:0] hcnt;
   reg [VER_BIT_DEPTH-1:0] vcnt;
@@ -68,10 +74,22 @@ module vga_text
                       (hor_sym_cnt < TEXT_SYMS_PER_LINE) &
                       (ver_sym_cnt < TEXT_SYMS_PER_LINE) &
                       sym_pixel;
-  wire [HOR_BIT_DEPTH-1:0] hor_sym_cnt;
-  wire [VER_BIT_DEPTH-1:0] ver_sym_cnt;
+  wire [$clog2(TEXT_SYMS_PER_LINE)-1:0] hor_sym_cnt;
+  wire [$clog2(TEXT_LINES_PER_SCREEN)-1:0] ver_sym_cnt;
   wire [HOR_BIT_DEPTH-1:0] hor_data_cnt = {HOR_BIT_DEPTH{(hcnt >= HOR_DATA_START) & (hcnt < HOR_FRONT_PORCH_START)}} & (hcnt - HOR_DATA_START);
   wire [VER_BIT_DEPTH-1:0] ver_data_cnt = {VER_BIT_DEPTH{(vcnt >= VER_DATA_START) & (vcnt < VER_FRONT_PORCH_START)}} & (vcnt - VER_DATA_START);
+
+  wire [$clog2(TEXT_LINES_PER_SCREEN)-1:0] line_idx_norm;
+  division_tickless
+  #(
+    .BIT_DEPTH($clog2(TEXT_LINES_PER_SCREEN) + 2)
+  )
+  line_idx_div
+  (
+    .dividend(ver_sym_cnt + line_offset),
+    .divisor(TEXT_LINES_PER_SCREEN),
+    .remainder(line_idx_norm)
+  );
 
   division_tickless
   #(
@@ -109,17 +127,27 @@ module vga_text
   endgenerate
 */
   
-  assign sym_code[0] = text[(hor_sym_cnt + ver_sym_cnt * TEXT_SYMS_PER_LINE) * 8];
-  assign sym_code[1] = text[(hor_sym_cnt + ver_sym_cnt * TEXT_SYMS_PER_LINE) * 8 + 1];
-  assign sym_code[2] = text[(hor_sym_cnt + ver_sym_cnt * TEXT_SYMS_PER_LINE) * 8 + 2];
-  assign sym_code[3] = text[(hor_sym_cnt + ver_sym_cnt * TEXT_SYMS_PER_LINE) * 8 + 3];
-  assign sym_code[4] = text[(hor_sym_cnt + ver_sym_cnt * TEXT_SYMS_PER_LINE) * 8 + 4];
-  assign sym_code[5] = text[(hor_sym_cnt + ver_sym_cnt * TEXT_SYMS_PER_LINE) * 8 + 5];
-  assign sym_code[6] = text[(hor_sym_cnt + ver_sym_cnt * TEXT_SYMS_PER_LINE) * 8 + 6];
-  assign sym_code[7] = text[(hor_sym_cnt + ver_sym_cnt * TEXT_SYMS_PER_LINE) * 8 + 7];
+  // FIXME: What if sym_idx > size of text?
+  wire [$clog2(TEXT_SIZE)-1:0] sym_idx = hor_sym_cnt + line_idx_norm * TEXT_SYMS_PER_LINE;
+  assign sym_code[0] = text[(sym_idx) * 8];
+  assign sym_code[1] = text[(sym_idx) * 8 + 1];
+  assign sym_code[2] = text[(sym_idx) * 8 + 2];
+  assign sym_code[3] = text[(sym_idx) * 8 + 3];
+  assign sym_code[4] = text[(sym_idx) * 8 + 4];
+  assign sym_code[5] = text[(sym_idx) * 8 + 5];
+  assign sym_code[6] = text[(sym_idx) * 8 + 6];
+  assign sym_code[7] = text[(sym_idx) * 8 + 7];
 
   always @(posedge clk)
   begin
+    /*
+    $display("%d;%d;%d;%d;%d\n", 
+             ver_sym_cnt,
+             line_offset, 
+             line_idx_norm, 
+             TEXT_LINES_PER_SCREEN,
+             $clog2(TEXT_LINES_PER_SCREEN));
+    */
     if (reset)
     begin
       hcnt <= 0;
