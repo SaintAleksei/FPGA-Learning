@@ -31,7 +31,6 @@ def max_font_dimensions(font_path, font_size):
     char = chr(char_code)
     if char in printable:
       bbox = font.getbbox(char)
-      print(char, bbox)
       width  = bbox[2]
       height = bbox[3]
 
