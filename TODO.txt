@@ -1,4 +1,2 @@
 Fix build errors caused by repo tree refactor
 Update README.txt
-Complete vga_text project and realted module in library
-Add VPI using support
