@@ -5,4 +5,4 @@ if [ -z "$1" ]; then
     exit 1
 fi
 
-cp -r example/ $1
+cp -r projects/example/ projects/$1

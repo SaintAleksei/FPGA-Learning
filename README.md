@@ -1,3 +1,5 @@
+This README is out of date. Will be updated soon.
+
 DE2-115 Verilog Projects
 ------------------------
 

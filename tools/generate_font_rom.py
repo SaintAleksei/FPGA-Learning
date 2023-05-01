@@ -1,5 +1,8 @@
-import sys
+#!/usr/bin/python3
+
+import argparse
 import re
+import os
 from PIL import Image, ImageFont, ImageDraw
 
 printable = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ!"#$%&\'()*+,-./:;<=>?@[\\]^_`{|}~'
@@ -31,7 +34,9 @@ def max_font_dimensions(font_path, font_size):
   for char_code in range(256):
     char = chr(char_code)
     if char in printable:
-      width, height = font.getsize(char)
+      bbox = font.getbbox(char)
+      width  = bbox[2] - bbox[0]
+      height = bbox[3] - bbox[1]
 
       max_width  = max(max_width, width)
       max_height = max(max_height, height)
@@ -72,33 +77,23 @@ def main(font_path, font_size, template_file):
       font_generation = font_generation + f'\tassign font[{idx}][{char}] = {line};\n'
     font_generation = font_generation + '\n'
 
-  font_name = 'font_' + font_path.split('.')[0] + f'_{x_size}x{y_size}';
+  font_path_basename = os.path.basename(font_path)
 
-  font_rom_file = process_template(template_file, FONT_NAME=font_name,
+  font_rom_name = 'font_' + font_path_basename.split('.')[0] + f'_{x_size}x{y_size}'
+  font_rom_path = os.path.join('font', font_rom_name + '.v')
+
+  font_rom_file = process_template(template_file, 
+                                   FONT_NAME=font_rom_name,
                                    FONT_GENERATION=font_generation,
                                    FONT_WIDTH=x_size,
                                    FONT_HEIGH=y_size)
-  with open(font_name + '.v', 'w') as f:
+  with open(font_rom_path, 'w') as f:
     f.write(font_rom_file)
 
-
-def test(font_path, font_size):
-  x_size, y_size = max_font_dimensions(font_path, font_size)
-  unprintable = [[1] * x_size] * y_size
-  for char in range(256):
-    matrix = unprintable
-    if chr(char) in printable:
-      matrix = extract_glyph_bitmap(font_path, font_size, chr(char), x_size, y_size)
-    verilog_matrix = bitmap_to_verilog(matrix)
-    for row in matrix:
-      row_line = ''
-      for pix in row:
-        if pix == 1:
-          row_line = row_line + "#"
-        else:
-          row_line = row_line + '.'
-      print(row_line)
-    print('!' * 30)
-
 if __name__ == "__main__":
-  main('vt323.regular.ttf', 16, 'font_rom.v')
+  arg_parser = argparse.ArgumentParser(description="Python tool for generation verilog ROM with font from TTF/OTF files")
+  arg_parser.add_argument("--font", type=str, required=True, help="File with font if TTF/OTF format")
+  arg_parser.add_argument("--size", type=int, required=True, help="Size of font in output verilog ROM")
+  args = arg_parser.parse_args()
+
+  main(args.font, args.size, 'font/font_rom_template.py')
