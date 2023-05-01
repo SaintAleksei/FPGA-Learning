@@ -44,9 +44,7 @@ module vga_text
   output wire [COLOR_BIT_DEPTH-1:0] green,
   output wire [COLOR_BIT_DEPTH-1:0] blue,
   output wire hsync,
-  output wire vsync,
-  output wire sync_n,
-  output wire blank_n
+  output wire vsync
 );
   localparam HOR_BACK_PORCH_START = HOR_SYNC_PULSE;
   localparam HOR_DATA_START = HOR_BACK_PORCH_START + HOR_BACK_PORCH;
@@ -60,11 +58,6 @@ module vga_text
   reg [HOR_BIT_DEPTH-1:0] hcnt;
   reg [VER_BIT_DEPTH-1:0] vcnt;
 
-  assign sync_n = 1'b0;
-  assign blank_n = (hcnt >= HOR_DATA_START) &
-                   (hcnt < HOR_FRONT_PORCH_START) &
-                   (vcnt >= VER_DATA_START) &
-                   (vcnt < VER_FRONT_PORCH_START);
   assign hsync = (hcnt >= HOR_BACK_PORCH_START);
   assign vsync = (vcnt >= VER_BACK_PORCH_START);
   assign red   = {COLOR_BIT_DEPTH{show_pixel}};

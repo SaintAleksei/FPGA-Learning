@@ -2,8 +2,13 @@
  * Template file that can be used in many projects
  */
 
-`include "../library.v"
-`include "../font_vt323_8x16.v"
+`ifdef ICARUS_VERILOG
+`include "lib/library.v"
+`include "font/font_vt323_14x32.v"
+`endif
+
+`define FONT_WIDTH 14
+`define FONT_HEIGHT 32
 
 module de2_115
 (
@@ -64,8 +69,8 @@ module de2_115
   assign HEX7 = SEVSEG_OFF;
 
 
-  localparam SYM_PER_LINE = 640 / 16;
-  localparam LINE_PER_SCREEN = 480 / 8;
+  localparam SYM_PER_LINE = 640 / `FONT_WIDTH;
+  localparam LINE_PER_SCREEN = 480 / `FONT_HEIGHT;
 
   wire [8 * SYM_PER_LINE * LINE_PER_SCREEN - 1:0] text;
 
@@ -88,8 +93,11 @@ module de2_115
   wire sym_y;
   wire sym_pixel;
   wire sym_code;
-  font_vt323_8x16 
-  font
+  font_vt323_14x32
+  #(
+    .XY_BIT_DEPTH(4)
+  )
+  font_rom
   (
     .sym_x(sym_x),
     .sym_y(sym_y),
@@ -98,6 +106,11 @@ module de2_115
   );
 
   vga_text
+  #(
+    .FONT_WIDTH(`FONT_WIDTH),
+    .FONT_HEIGHT(`FONT_HEIGHT),
+    .XY_BIT_DEPTH(4)
+  )
   vga_text_inst 
   (
     .clk(pixel_clock), 
