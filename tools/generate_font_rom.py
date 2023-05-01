@@ -86,14 +86,14 @@ def main(font_path, font_size, template_file):
                                    FONT_NAME=font_rom_name,
                                    FONT_GENERATION=font_generation,
                                    FONT_WIDTH=x_size,
-                                   FONT_HEIGH=y_size)
+                                   FONT_HEIGHT=y_size)
   with open(font_rom_path, 'w') as f:
     f.write(font_rom_file)
 
 if __name__ == "__main__":
-  arg_parser = argparse.ArgumentParser(description="Python tool for generation verilog ROM with font from TTF/OTF files")
-  arg_parser.add_argument("--font", type=str, required=True, help="File with font if TTF/OTF format")
-  arg_parser.add_argument("--size", type=int, required=True, help="Size of font in output verilog ROM")
+  arg_parser = argparse.ArgumentParser(description="Python tool for generating verilog ROM with font from TTF/OTF files")
+  arg_parser.add_argument("--font", type=str, required=True, help="file with font in TTF/OTF format")
+  arg_parser.add_argument("--size", type=int, required=True, help="size of font in output verilog ROM")
   args = arg_parser.parse_args()
 
-  main(args.font, args.size, 'font/font_rom_template.py')
+  main(args.font, args.size, 'font/font_rom_template.v')
