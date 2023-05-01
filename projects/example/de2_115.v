@@ -3,7 +3,7 @@
  */
 
 `ifdef ICARUS_VERILOG
-`include "library.v"
+`include "lib/library.v"
 `endif
 
 module de2_115
