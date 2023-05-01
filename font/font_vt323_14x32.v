@@ -2,12 +2,9 @@
 `define FONT_WIDTH  14
 
 module font_vt323_14x32
-#(
-  parameter XY_BIT_DEPTH = 8
-)
 (
-  input wire  [XY_BIT_DEPTH-1:0] sym_x,
-  input wire  [XY_BIT_DEPTH-1:0] sym_y,
+  input wire  [$clog2(`FONT_WIDTH)-1:0]  sym_x,
+  input wire  [$clog2(`FONT_HEIGHT)-1:0] sym_y,
   input wire  [7:0]              sym_code,
   output wire                    sym_pixel
 );

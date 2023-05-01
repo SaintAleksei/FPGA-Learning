@@ -1,4 +1,4 @@
-`include "font/{{FONT_NAME}}.v"
+`include "font/font_vt323_14x32.v"
 
 module font_rom_wrapper
 (
@@ -7,7 +7,7 @@ module font_rom_wrapper
   input wire  [7:0]              sym_code,
   output wire                    sym_pixel
 );
-  {{FONT_NAME}}
+  font_vt323_14x32
   font_rom_wrapped
   (
     .sym_x(sym_x),

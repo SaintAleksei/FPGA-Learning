@@ -112,5 +112,4 @@ if __name__ == "__main__":
   arg_parser.add_argument("--size", type=int, required=True, help="size of font in output verilog ROM")
   args = arg_parser.parse_args()
 
-  test(args.font, args.size)
   main(args.font, args.size, 'font/font_rom_template.v', 'font/font_rom_wrapper_template.v')
