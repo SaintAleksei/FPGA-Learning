@@ -12,10 +12,10 @@ module {{FONT_NAME}}
   output wire                    sym_pixel
 );
 
-  wire [`FONT_WIDTH-1:0] font [`FONT_HEIGHT-1:0] [255:0];
+  wire [0:`FONT_WIDTH-1] font [`FONT_HEIGHT-1:0] [255:0];
 
 // Here all font bits should be assigned
 {{FONT_GENERATION}}
 
-  assign pixel = font[sym_y][sym_code][sym_x];
+  assign sym_pixel = font[sym_y][sym_code][sym_x];
 endmodule

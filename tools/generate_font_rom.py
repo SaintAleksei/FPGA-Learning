@@ -11,10 +11,6 @@ def process_template(template_file, **subs):
   with open(template_file, 'r') as f:
     template = f.read()
 
-  # Define variables to be used in the template
-  name = 'John'
-  current_year = 2023
-
   # Find and replace inline Python code
   pattern = r'\{\{([^}]+)\}\}'
   def evaluate_expression(match):
@@ -35,8 +31,9 @@ def max_font_dimensions(font_path, font_size):
     char = chr(char_code)
     if char in printable:
       bbox = font.getbbox(char)
-      width  = bbox[2] - bbox[0]
-      height = bbox[3] - bbox[1]
+      print(char, bbox)
+      width  = bbox[2]
+      height = bbox[3]
 
       max_width  = max(max_width, width)
       max_height = max(max_height, height)
@@ -64,7 +61,7 @@ def bitmap_to_verilog(matrix):
     lines.append(line)
   return lines
 
-def main(font_path, font_size, template_file):
+def main(font_path, font_size, font_rom_tpl, font_rom_wrapper_tpl):
   font_generation = ""
   x_size, y_size = max_font_dimensions(font_path, font_size)
   unprintable = [[1] * x_size] * y_size
@@ -82,13 +79,33 @@ def main(font_path, font_size, template_file):
   font_rom_name = 'font_' + font_path_basename.split('.')[0] + f'_{x_size}x{y_size}'
   font_rom_path = os.path.join('font', font_rom_name + '.v')
 
-  font_rom_file = process_template(template_file, 
+  font_rom_file = process_template(font_rom_tpl, 
                                    FONT_NAME=font_rom_name,
                                    FONT_GENERATION=font_generation,
                                    FONT_WIDTH=x_size,
                                    FONT_HEIGHT=y_size)
+  font_rom_wrapper_file = process_template(font_rom_wrapper_tpl,
+                                           FONT_NAME=font_rom_name)
   with open(font_rom_path, 'w') as f:
     f.write(font_rom_file)
+
+  print(f'Font ROM generated: \'{font_rom_path}\'')
+
+  with open('font/font_rom_wrapper.v', 'w') as f:
+    f.write(font_rom_wrapper_file)
+
+  print(f'Font ROM wrapper generated: \'font/font_rom_wrapper.v\'')
+
+def test(font_path, font_size):
+  matrix = extract_glyph_bitmap(font_path, font_size, 'y', font_size, font_size)
+  for row in matrix:
+    string = ''
+    for el in row:
+      if el == 1:
+        string = string + '#';
+      else:
+        string = string + ' ';
+    print(string)
 
 if __name__ == "__main__":
   arg_parser = argparse.ArgumentParser(description="Python tool for generating verilog ROM with font from TTF/OTF files")
@@ -96,4 +113,5 @@ if __name__ == "__main__":
   arg_parser.add_argument("--size", type=int, required=True, help="size of font in output verilog ROM")
   args = arg_parser.parse_args()
 
-  main(args.font, args.size, 'font/font_rom_template.v')
+  test(args.font, args.size)
+  main(args.font, args.size, 'font/font_rom_template.v', 'font/font_rom_wrapper_template.v')
