@@ -164,7 +164,7 @@ module de2_115
   );
 
   // Notation modules instantiation
-  notation_flash
+  notation_tickless
   #(
     .BIT_DEPTH(16),
     .NUM_DIGITS(4),
@@ -177,7 +177,7 @@ module de2_115
   );
 
   wire [15:0] temporary_time_div_10;
-  division_flash
+  division_tickless
   #(
     .BIT_DEPTH(16)
   )
@@ -188,7 +188,7 @@ module de2_115
     .quotient(temporary_time_div_10),
   );
 
-  notation_flash
+  notation_tickless
   #(
     .BIT_DEPTH(16),
     .NUM_DIGITS(2),

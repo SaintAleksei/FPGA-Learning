@@ -144,7 +144,7 @@ module de2_115
   );
 
   // Notation modules, flash means working without registers 
-  notation_flash
+  notation_tickless
   #(
     .BIT_DEPTH(8),
     .NUM_DIGITS(2),
@@ -156,7 +156,7 @@ module de2_115
     .digits({numbers[1], numbers[0]})
   );
 
-  notation_flash
+  notation_tickless
   #(
     .BIT_DEPTH(8),
     .NUM_DIGITS(2),
@@ -168,7 +168,7 @@ module de2_115
     .digits({numbers[3], numbers[2]})
   );
 
-  notation_flash
+  notation_tickless
   #(
     .BIT_DEPTH(8),
     .NUM_DIGITS(2),

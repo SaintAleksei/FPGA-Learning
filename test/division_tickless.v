@@ -1,7 +1,7 @@
-`include "library.v"
+`include "lib/library.v"
 `timescale 1ns/1ps
 
-module tb_division_flash();
+module tb_division_tickless();
   parameter BIT_DEPTH = 32;
   reg [BIT_DEPTH-1:0] dividend;
   reg [BIT_DEPTH-1:0] divisor;
@@ -9,7 +9,7 @@ module tb_division_flash();
   wire [BIT_DEPTH-1:0] remainder;
 
   // Instantiate the division module
-  division_flash 
+  division_tickless 
   #(
     .BIT_DEPTH(BIT_DEPTH)
   ) 
@@ -47,9 +47,9 @@ module tb_division_flash();
 
   // Testbench stimulus
   initial begin
-    $dumpfile("tb_division_flash.vcd");
-    $dumpvars(0, tb_division_flash);
-    $display("Running tests for module \"division_flash\"...");
+    $dumpfile("tb_division_tickless.vcd");
+    $dumpvars(0, tb_division_tickless);
+    $display("Running tests for module \"division_tickless\"...");
     dividend = 0;
     divisor  = 0;
     #1;

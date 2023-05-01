@@ -1,7 +1,7 @@
-`include "library.v"
+`include "lib/library.v"
 `timescale 1ns / 1ps
 
-module tb_notation_flash();
+module tb_notation_tickless();
   // Parameters for different instances
   parameter BIT_DEPTH1 = 8;
   parameter NUM_DIGITS1 = 3;
@@ -19,7 +19,7 @@ module tb_notation_flash();
   wire [(NUM_DIGITS2 * BIT_DEPTH2)-1:0] digits2;
 
   // Instantiate the notation modules
-  notation_flash 
+  notation_tickless 
   #(
     .BIT_DEPTH(BIT_DEPTH1), 
     .NUM_DIGITS(NUM_DIGITS1), 
@@ -31,7 +31,7 @@ module tb_notation_flash();
     .digits(digits1)
   );
 
-  notation_flash 
+  notation_tickless 
   #(
     .BIT_DEPTH(BIT_DEPTH2), 
     .NUM_DIGITS(NUM_DIGITS2), 
@@ -72,9 +72,9 @@ module tb_notation_flash();
 
   // Test cases
   initial begin
-    $dumpfile("tb_notation_flash.vcd");
-    $dumpvars(0, tb_notation_flash);
-    $display("Running tests for \"notation_flash\" module");
+    $dumpfile("tb_notation_tickless.vcd");
+    $dumpvars(0, tb_notation_tickless);
+    $display("Running tests for \"notation_tickless\" module");
     // Initialize signals
     number1 = 0;
     number2 = 0;

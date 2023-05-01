@@ -73,8 +73,8 @@ module de2_115
     else if (key_sync[1])
       stored_number <= SW[7:0];
 
-  // Notation_flash module instance
-  notation_flash
+  // notation_tickless module instance
+  notation_tickless
   dec_notation
   (
     .number(stored_number), 

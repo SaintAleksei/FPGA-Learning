@@ -72,7 +72,7 @@ module vga_text
 
   wire [HOR_BIT_DEPTH-1:0] hor_sym_cnt;
   wire [HOR_BIT_DEPTH-1:0] ver_sym_cnt;
-  division_flash
+  division_tickless
   #(
     .BIT_DEPTH(HOR_BIT_DEPTH)
   )
@@ -84,7 +84,7 @@ module vga_text
     .remainder(sym_x)
   );
 
-  division_flash
+  division_tickless
   #(
     .BIT_DEPTH(VER_BIT_DEPTH) 
   )
@@ -459,7 +459,7 @@ endmodule
  *  Implementation of `notation` module without any registers
  */
 
-module notation_flash
+module notation_tickless
 #(
   parameter BIT_DEPTH = 8,          // Bit depth of the input number and output digits
   parameter NUM_DIGITS = 3,         // Number of digits in the output
@@ -475,8 +475,8 @@ module notation_flash
   genvar i;
   generate
     for (i = 0; i < NUM_DIGITS; i = i + 1)
-    begin: notation_flash_loop
-      division_flash
+    begin: notation_tickless_loop
+      division_tickless
       #(
         .BIT_DEPTH(BIT_DEPTH)
       ) 
@@ -495,7 +495,7 @@ endmodule
  *  Implementation of `division` module without any registers
  */
 
-module division_flash
+module division_tickless
 #(
   parameter BIT_DEPTH = 8
 )
