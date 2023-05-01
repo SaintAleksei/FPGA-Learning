@@ -17,6 +17,7 @@ module vga_text
   parameter COLOR_BIT_DEPTH = 8,
   parameter HOR_BIT_DEPTH   = 12,
   parameter VER_BIT_DEPTH   = 12,
+  parameter XY_BIT_DEPTH    = 8,
 
   // font parameters
   parameter FONT_WIDTH      = 16,
@@ -35,10 +36,10 @@ module vga_text
   // This wires should be connected to font module
   input  wire sym_pixel,
   output wire [7:0] sym_code,
-  output wire [HOR_BIT_DEPTH-1:0] sym_x,
-  output wire [VER_BIT_DEPTH-1:0] sym_y,
+  output wire [XY_BIT_DEPTH-1:0] sym_x,
+  output wire [XY_BIT_DEPTH-1:0] sym_y,
 
-  // This wire should be connected to VGA (through COLOT_BIT_DEPTH-bit DAC)
+  // This wires should be connected to VGA (through COLOT_BIT_DEPTH-bit DAC)
   output wire [COLOR_BIT_DEPTH-1:0] red,
   output wire [COLOR_BIT_DEPTH-1:0] green,
   output wire [COLOR_BIT_DEPTH-1:0] blue,
@@ -50,9 +51,11 @@ module vga_text
   localparam HOR_BACK_PORCH_START = HOR_SYNC_PULSE;
   localparam HOR_DATA_START = HOR_BACK_PORCH_START + HOR_BACK_PORCH;
   localparam HOR_FRONT_PORCH_START = HOR_DATA_START + HOR_RES;
+  localparam HOR_MAX = HOR_FRONT_PORCH_START + HOR_FRONT_PORCH;
   localparam VER_BACK_PORCH_START = VER_SYNC_PULSE;
   localparam VER_DATA_START = VER_BACK_PORCH_START + VER_BACK_PORCH;
   localparam VER_FRONT_PORCH_START = VER_DATA_START + VER_RES;
+  localparam VER_MAX = VER_FRONT_PORCH_START + VER_FRONT_PORCH;
 
   reg [HOR_BIT_DEPTH-1:0] hcnt;
   reg [VER_BIT_DEPTH-1:0] vcnt;
@@ -64,22 +67,27 @@ module vga_text
                    (vcnt < VER_FRONT_PORCH_START);
   assign hsync = (hcnt >= HOR_BACK_PORCH_START);
   assign vsync = (vcnt >= VER_BACK_PORCH_START);
-  assign show_pixel = (hcnt >= HOR_DATA_START && hcnt < HOR_FRONT_PORCH) &
-                      (vcnt >= VER_DATA_START && vcnt < VER_FRONT_PORCH); 
   assign red   = {COLOR_BIT_DEPTH{show_pixel}};
   assign green = red;
   assign blue  = red;
-
+  assign show_pixel = (hcnt >= HOR_DATA_START && hcnt < HOR_FRONT_PORCH_START) &
+                      (vcnt >= VER_DATA_START && vcnt < VER_FRONT_PORCH_START) & 
+                      (hor_sym_cnt < TEXT_SYMS_PER_LINE) &
+                      (ver_sym_cnt < TEXT_SYMS_PER_LINE) &
+                      sym_pixel;
   wire [HOR_BIT_DEPTH-1:0] hor_sym_cnt;
-  wire [HOR_BIT_DEPTH-1:0] ver_sym_cnt;
+  wire [VER_BIT_DEPTH-1:0] ver_sym_cnt;
+  wire [HOR_BIT_DEPTH-1:0] hor_data_cnt = {HOR_BIT_DEPTH{(hcnt >= HOR_DATA_START) & (hcnt < HOR_FRONT_PORCH_START)}} & (hcnt - HOR_DATA_START);
+  wire [VER_BIT_DEPTH-1:0] ver_data_cnt = {VER_BIT_DEPTH{(vcnt >= VER_DATA_START) & (vcnt < VER_FRONT_PORCH_START)}} & (vcnt - VER_DATA_START);
+
   division_tickless
   #(
     .BIT_DEPTH(HOR_BIT_DEPTH)
   )
   hcnt_div
   (
-    .dividend(hcnt),
-    .divisor(FONT_WIDTH),
+    .dividend(hor_data_cnt),
+    .divisor(FONT_WIDTH[HOR_BIT_DEPTH-1:0]),
     .quotient(hor_sym_cnt),
     .remainder(sym_x)
   );
@@ -90,13 +98,15 @@ module vga_text
   )
   vcnt_div
   (
-    .dividend(vcnt),
-    .divisor(FONT_HEIGHT),
+    .dividend(ver_data_cnt),
+    .divisor(FONT_HEIGHT[VER_BIT_DEPTH-1:0]),
     .quotient(ver_sym_cnt),
     .remainder(sym_y)
   );
 
+/*
   wire [7:0] text_array [TEXT_SYMS_PER_LINE * TEXT_LINES_PER_SCREEN - 1:0];
+
   genvar gi;
   generate 
     for (gi = 0; gi < TEXT_SYMS_PER_LINE * TEXT_LINES_PER_SCREEN; gi = gi + 1)
@@ -104,10 +114,19 @@ module vga_text
       assign text_array[gi] = text[(gi + 1) * 8 - 1: gi * 8];
     end
   endgenerate
+*/
   
-  assign sym_code = text_array[hor_sym_cnt + ver_sym_cnt * TEXT_SYMS_PER_LINE];
-  
+  assign sym_code[0] = text[(hor_sym_cnt + ver_sym_cnt * TEXT_SYMS_PER_LINE) * 8];
+  assign sym_code[1] = text[(hor_sym_cnt + ver_sym_cnt * TEXT_SYMS_PER_LINE) * 8 + 1];
+  assign sym_code[2] = text[(hor_sym_cnt + ver_sym_cnt * TEXT_SYMS_PER_LINE) * 8 + 2];
+  assign sym_code[3] = text[(hor_sym_cnt + ver_sym_cnt * TEXT_SYMS_PER_LINE) * 8 + 3];
+  assign sym_code[4] = text[(hor_sym_cnt + ver_sym_cnt * TEXT_SYMS_PER_LINE) * 8 + 4];
+  assign sym_code[5] = text[(hor_sym_cnt + ver_sym_cnt * TEXT_SYMS_PER_LINE) * 8 + 5];
+  assign sym_code[6] = text[(hor_sym_cnt + ver_sym_cnt * TEXT_SYMS_PER_LINE) * 8 + 6];
+  assign sym_code[7] = text[(hor_sym_cnt + ver_sym_cnt * TEXT_SYMS_PER_LINE) * 8 + 7];
+
   always @(posedge clk)
+  begin
     if (reset)
     begin
       hcnt <= 0;
@@ -115,9 +134,10 @@ module vga_text
     end
     else
     begin
-      hcnt <= (hcnt == HOR_RES - 1) ? 0 : hcnt + 1;
-      vcnt <= (hcnt != HOR_RES - 1) ? vcnt :
-              (vcnt == VER_RES - 1) ? 0 : vcnt + 1;
+      hcnt <= (hcnt == HOR_MAX - 1) ? 0 : hcnt + 1;
+      vcnt <= (hcnt != HOR_MAX - 1) ? vcnt :
+              (vcnt == VER_MAX - 1) ? 0 : vcnt + 1;
+    end
   end
 endmodule 
 
@@ -141,7 +161,7 @@ module memory
   input  wire [BIT_DEPTH-1:0] val2write,
   output wire [BIT_DEPTH-1:0] val2read
 );
-  parameter MEM_SIZE = 1 << ADDR_BIT_DEPTH;
+  localparam MEM_SIZE = 1 << ADDR_BIT_DEPTH;
 
   // Memory registers
   reg [BIT_DEPTH-1:0] mem [MEM_SIZE-1:0];
@@ -187,7 +207,7 @@ module timer
     if (reset)
       cnt_val <= 0;
     else
-      cnt_val = cnt_val + 1;
+      cnt_val <= cnt_val + 1;
 endmodule
 
 // Convert 4-bit number to hexadecimal representation for 7-segment dispay
