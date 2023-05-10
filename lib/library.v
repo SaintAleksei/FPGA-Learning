@@ -106,7 +106,7 @@ module ps2_receiver
       recv_data     <= 8'b0;
       recv_complete <= 1'b0; 
       bit_cnt       <= 3'b0;
-      paritiy       <= 1'b0;
+      parity        <= 1'b0;
     end   
     else if (ps2_sampl_result ^ ps2_sampl_result_late) // First pulse with sampling complete flag high
     begin
@@ -116,7 +116,7 @@ module ps2_receiver
           if (~ps2_sampl_result) // Good start bit detected (low)
           begin
             state         <= DATA;   // Switch to DATA state
-            bit_count     <= 3'b000; // Reset bit counter
+            bit_cnt       <= 3'b000; // Reset bit counter
             recv_data     <= 8'b0;   // Reset received byte
             recv_complete <= 1'b0;   // Reset complete flag
             parity        <= 1'b0;   // Reset parity calculation register
@@ -126,8 +126,8 @@ module ps2_receiver
         begin
           recv_data <= {ps2_sampl_result, recv_data[7:1]};     // Save new data bit
           parity    <= parity ^ ps2_sampl_result ;             // Update parity calculation
-          bit_count <= bit_count + 1;                          // Increment bit counter
-          state     <= (bit_count == 3'b111) ? PARITY : state; // Switch to PARITY state
+          bit_cnt   <= bit_cnt + 1;                            // Increment bit counter
+          state     <= (bit_cnt == 3'b111) ? PARITY : state;   // Switch to PARITY state
         end
         PARITY: 
         begin
@@ -137,7 +137,7 @@ module ps2_receiver
         STOP: 
         begin
           // Set complete flag is stop bit is correct
-          recv_complete <= (ps2_sampl_result  == 1) ? 1'b1 : 0'b0;
+          recv_complete <= (ps2_sampl_result == 1) ? 1'b1 : 1'b0;
           state         <= IDLE; // Return to IDLE state
         end
       endcase
@@ -162,8 +162,8 @@ module vga_text
 
   // font parameters
   parameter FONT_WIDTH      = 16,
-  parameter FONT_HEIGHT     = 8,
-),
+  parameter FONT_HEIGHT     = 8
+)
 (
   // Clock and reset
   input  wire clk,
