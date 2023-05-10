@@ -1,97 +1,149 @@
 `ifndef LIBRARY_INCLUDED
 `define LIBRARY_INCLUDED
 
+/*
+ *          Module for signal sampling
+ *  Read `sampl_sig` signal `SAMPLES_COUNT` times once each `SAMPLES_STEP`
+ * pulses starting with rising edge of `sampl_clk`. `complete` and `result` 
+ * indicate result of sampling. 
+ *  WARNING: `clk` frequency should be big enough to include required amount 
+ * of samples between `sampl_clk` pulses
+ */
+module sampling
+#(
+  parameter SAMPLES_COUNT = 64,  // Count of samples 
+  parameter SAMPLES_STEP  = 1    // Number of pulses between samples
+)
+(
+  // Frequency of `clk` should be >> frequency of `sampl_clk`
+  input  wire clk,            // System clock
+  input  wire sampl_clk,      // Clock of signal to sample 
+  input  wire sampl_sig,      // Signal to sample
+  output reg  complete,       // Complete flag
+  output wire result          // Result of sampling
+);
+  reg [$clog2(SAMPLES_COUNT)-1:0] sampl_cnt;
+  reg [$clog2(SAMPLES_COUNT)-1:0] sampl_res;
+  reg [$clog2(SAMPLES_STEP)-1:0]  sampl_step_cnt;
+
+  wire sampl_clk_posedge;
+  sync
+  sampl_clk_sync
+  (
+    .async(sampl_clk),
+    .clk(clk),
+    .posedge_sync(sampl_clk_posedge)
+  );
+
+  wire sampl_sig_probe;
+  sync
+  sampl_sig_sync
+  (
+    .async(sampl_clk),
+    .sync(sampl_sig_probe)
+  );
+
+  assign result = (sampl_res > SAMPLES_COUNT / 2);
+
+  always @(posedge clk)
+  begin
+    if (sampl_clk_posedge) // Start of sampling
+    begin
+      sampl_step_cnt <= 0;
+      sampl_cnt      <= 0;
+      sampl_res      <= 0;
+      complete       <= 0;
+    end
+    else if (!complete) // Sampling isn't complete
+    begin
+      sampl_step_cnt <= (sampl_step_cnt == SAMPLES_STEP - 1) ? 0 : sampl_step_cnt + 1;
+      sampl_cnt      <= (sampl_step_cnt == SAMPLES_STEP - 1) ? sampl_cnt + 1: sampl_cnt;
+      sampl_res      <= (sampl_step_cnt == SAMPLES_STEP- 1) ? sampl_res + sampl_sig_probe : sampl_res;
+      complete       <= (sampl_cnt == SAMPLES_COUNT - 1);
+    end
+  end
+endmodule
+
 // PS/2 receiver module
-module ps2_receiver (
+module ps2_receiver 
+(
   input wire clk,             // System clock
   input wire reset,           // Reset signal (active high)
   input wire ps2_clk,         // PS/2 Clock signal
   input wire ps2_data,        // PS/2 Data signal
   output reg [7:0] recv_data, // Output: Last received byte
-  output reg recv_complete    // Output: High when a new scan code is available
+  output reg recv_complete    // Output: High when a recv_data byte is available
 );
-
   // State machine states
   localparam IDLE   = 3'b000,  // Waiting for start bit
              DATA   = 3'b010,  // Receiving data bits
              PARITY = 3'b011,  // Receiving parity bit
              STOP   = 3'b100;  // Receiving stop bit
 
-  reg [2:0] state;        // State register
-  reg [2:0] bit_count;    // Counter for data bits
-  reg parity;             // Parity bit calculation register
+  reg [2:0] state;     // State register
+  reg [2:0] bit_cnt;   // Counter for data bits
+  reg parity;          // Parity bit calculation register
 
-  
-  wire ps2_clk_synced;
-  wire ps2_clk_posedge;
-  sync 
-  ps2_clk_sync
+  reg ps2_sampl_result_late;
+  wire ps2_sampl_complete;
+  wire ps2_sampl_result;
+  sampling
+  ps2_sampl
   (
     .clk(clk),
-    .async(ps2_clk),
-    .sync(ps2_clk_synced),
-    .posedge_sync(ps2_clk_posedge)
+    .sampl_clk(~ps2_clk), // Use ps2_clk negedge as starting point of sampling
+    .sampl_sig(ps2_data),
+    .complete(ps2_sampl_complete),
+    .result(ps2_sampl_result)
   );
 
-  // State machine, triggered on rising edge of system clock or reset
   always @(posedge clk) 
   begin
-    if (reset) 
-    begin
-      state <= IDLE;     // Reset state to IDLE
-      recv_data <= 8'b0;
+    ps2_sampl_result_late <= ps2_sampl_result;
+    if (reset) // Reset state to IDLE 
+    begin 
+      state         <= IDLE;     
+      recv_data     <= 8'b0;
       recv_complete <= 1'b0; 
-      bit_count <= 3'b0;
-      paritiy <= 1'b0;
+      bit_cnt       <= 3'b0;
+      paritiy       <= 1'b0;
     end   
-    end else begin
+    else if (ps2_sampl_result ^ ps2_sampl_result_late) // First pulse with sampling complete flag high
+    begin
       case (state)
-        IDLE: begin
-          // Check for start bit (data low)
-          if (~ps2_data) begin
-            state <= DATA;
-            bit_count <= 3'b000; // Reset bit counter
-            shift_reg <= 8'b0;   // Reset shift register
-            parity <= 1'b0;    // Reset parity calculation register
+        IDLE: 
+        begin
+          if (~ps2_sampl_result) // Good start bit detected (low)
+          begin
+            state         <= DATA;   // Switch to DATA state
+            bit_count     <= 3'b000; // Reset bit counter
+            recv_data     <= 8'b0;   // Reset received byte
+            recv_complete <= 1'b0;   // Reset complete flag
+            parity        <= 1'b0;   // Reset parity calculation register
           end
         end
-        DATA: begin
-          // On rising edge of PS/2 clock, shift data bits into shift register
-          if (ps2_clk) begin
-            shift_reg <= {ps2_data, shift_reg[7:1]};
-            parity <= parity ^ ps2_data; // Update parity calculation
-            bit_count <= bit_count + 1;  // Increment bit counter
-            // If all 8 data bits received, move to PARITY state
-            if (bit_count == 3'b111) begin
-              state <= PARITY;
-            end
-          end
+        DATA: 
+        begin
+          recv_data <= {ps2_sampl_result, recv_data[7:1]};     // Save new data bit
+          parity    <= parity ^ ps2_sampl_result ;             // Update parity calculation
+          bit_count <= bit_count + 1;                          // Increment bit counter
+          state     <= (bit_count == 3'b111) ? PARITY : state; // Switch to PARITY state
         end
-        PARITY: begin
-          // On rising edge of PS/2 clock, check parity bit
-          if (ps2_clk) begin
-            // If calculated parity matches received parity, move to STOP state
-            if (parity == ps2_data) begin
-              state <= STOP;
-            end else begin
-              // If parity mismatch, return to IDLE state
-              state <= IDLE;
-            end
-          end
+        PARITY: 
+        begin
+          // Change state according to parity check
+          state <= (parity == ps2_sampl_result) ? STOP : IDLE;
         end
-        STOP: begin
-          // On rising edge of PS/2 clock, store received scan code
-          if (ps2_clk) begin
-            scan_code <= shift_reg;
-            valid <= 1'b1; // Set valid signal high
-            state <= IDLE; // Return to IDLE state
-          end
+        STOP: 
+        begin
+          // Set complete flag is stop bit is correct
+          recv_complete <= (ps2_sampl_result  == 1) ? 1'b1 : 0'b0;
+          state         <= IDLE; // Return to IDLE state
         end
       endcase
     end
   end
 endmodule
-
 
 module vga_text
 #(
@@ -105,16 +157,13 @@ module vga_text
   parameter VER_BACK_PORCH  = 33,
   parameter VER_RES         = 480,
   
-  // wires and registers bit-depth
+  // Color bit-depth
   parameter COLOR_BIT_DEPTH = 8,
 
   // font parameters
   parameter FONT_WIDTH      = 16,
   parameter FONT_HEIGHT     = 8,
-
-  parameter TEXT_SYMS_PER_LINE    = HOR_RES / FONT_WIDTH,
-  parameter TEXT_LINES_PER_SCREEN = VER_RES / FONT_HEIGHT
-)
+),
 (
   // Clock and reset
   input  wire clk,
@@ -137,8 +186,8 @@ module vga_text
   output wire hsync,
   output wire vsync
 );
-  //localparam TEXT_SYMS_PER_LINE    = HOR_RES / FONT_WIDTH;
-  //localparam TEXT_LINES_PER_SCREEN = VER_RES / FONT_HEIGHT;
+  localparam TEXT_SYMS_PER_LINE    = HOR_RES / FONT_WIDTH;
+  localparam TEXT_LINES_PER_SCREEN = VER_RES / FONT_HEIGHT;
   localparam HOR_BACK_PORCH_START = HOR_SYNC_PULSE;
   localparam HOR_DATA_START = HOR_BACK_PORCH_START + HOR_BACK_PORCH;
   localparam HOR_FRONT_PORCH_START = HOR_DATA_START + HOR_RES;
@@ -232,7 +281,7 @@ module vga_text
 
   always @(posedge clk)
   begin
-    /*
+    /* 
     $display("%d;%d;%d;%d;%d\n", 
              ver_sym_cnt,
              line_offset, 
@@ -330,7 +379,6 @@ module sevseg
   input  wire [3:0] number,
   output wire [6:0] digit
 );
-// FIXME: Maybe here can be used wires. What is more effective?
   wire [6:0] lut [0:15];
 // Values gathered from DE2-115 user manual, p. 37
 /*
@@ -340,7 +388,6 @@ module sevseg
   4   2
     3
 */
-// FIXME: How much time is needed for this initialization?
 //                    6543210
   assign lut[0]  = 7'b0111111;
   assign lut[1]  = 7'b0000110;
@@ -779,4 +826,4 @@ module shiftreg
       register <= {right_shift_bit, register[BIT_DEPTH-1:1]};
 endmodule
 
-`endif
+`endif // LIBRARY_INCLUDED
