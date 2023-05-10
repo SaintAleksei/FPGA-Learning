@@ -1,2 +1,4 @@
 Fix build errors caused by repo tree refactor
-Update README.txt
+Add tests to sampling and ps2_receiver modules from library
+Add project using ps2_receiver module
+Update README.md
