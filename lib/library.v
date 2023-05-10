@@ -1,6 +1,98 @@
 `ifndef LIBRARY_INCLUDED
 `define LIBRARY_INCLUDED
 
+// PS/2 receiver module
+module ps2_receiver (
+  input wire clk,             // System clock
+  input wire reset,           // Reset signal (active high)
+  input wire ps2_clk,         // PS/2 Clock signal
+  input wire ps2_data,        // PS/2 Data signal
+  output reg [7:0] recv_data, // Output: Last received byte
+  output reg recv_complete    // Output: High when a new scan code is available
+);
+
+  // State machine states
+  localparam IDLE   = 3'b000,  // Waiting for start bit
+             DATA   = 3'b010,  // Receiving data bits
+             PARITY = 3'b011,  // Receiving parity bit
+             STOP   = 3'b100;  // Receiving stop bit
+
+  reg [2:0] state;        // State register
+  reg [2:0] bit_count;    // Counter for data bits
+  reg parity;             // Parity bit calculation register
+
+  
+  wire ps2_clk_synced;
+  wire ps2_clk_posedge;
+  sync 
+  ps2_clk_sync
+  (
+    .clk(clk),
+    .async(ps2_clk),
+    .sync(ps2_clk_synced),
+    .posedge_sync(ps2_clk_posedge)
+  );
+
+  // State machine, triggered on rising edge of system clock or reset
+  always @(posedge clk) 
+  begin
+    if (reset) 
+    begin
+      state <= IDLE;     // Reset state to IDLE
+      recv_data <= 8'b0;
+      recv_complete <= 1'b0; 
+      bit_count <= 3'b0;
+      paritiy <= 1'b0;
+    end   
+    end else begin
+      case (state)
+        IDLE: begin
+          // Check for start bit (data low)
+          if (~ps2_data) begin
+            state <= DATA;
+            bit_count <= 3'b000; // Reset bit counter
+            shift_reg <= 8'b0;   // Reset shift register
+            parity <= 1'b0;    // Reset parity calculation register
+          end
+        end
+        DATA: begin
+          // On rising edge of PS/2 clock, shift data bits into shift register
+          if (ps2_clk) begin
+            shift_reg <= {ps2_data, shift_reg[7:1]};
+            parity <= parity ^ ps2_data; // Update parity calculation
+            bit_count <= bit_count + 1;  // Increment bit counter
+            // If all 8 data bits received, move to PARITY state
+            if (bit_count == 3'b111) begin
+              state <= PARITY;
+            end
+          end
+        end
+        PARITY: begin
+          // On rising edge of PS/2 clock, check parity bit
+          if (ps2_clk) begin
+            // If calculated parity matches received parity, move to STOP state
+            if (parity == ps2_data) begin
+              state <= STOP;
+            end else begin
+              // If parity mismatch, return to IDLE state
+              state <= IDLE;
+            end
+          end
+        end
+        STOP: begin
+          // On rising edge of PS/2 clock, store received scan code
+          if (ps2_clk) begin
+            scan_code <= shift_reg;
+            valid <= 1'b1; // Set valid signal high
+            state <= IDLE; // Return to IDLE state
+          end
+        end
+      endcase
+    end
+  end
+endmodule
+
+
 module vga_text
 #(
   // VGA timings 
