@@ -1,14 +1,10 @@
 /*
- * Template file that can be used in many projects
+ *          Project demostrating vga_text module on real board
+ *  Interface:
+ *    * KEY0 - reset
+ *    * KEY1 - increment line_offset, scroll picture up by 1 line
+ *    * KEY2 - decrement line_offset, scroll picture down by 1 line
  */
-
-`ifdef ICARUS_VERILOG
-`include "lib/library.v"
-`include "font/font_vt323_14x32.v"
-`endif
-
-`define FONT_WIDTH 14
-`define FONT_HEIGHT 32
 
 module de2_115
 (
@@ -28,12 +24,15 @@ module de2_115
   output wire [7:0]  VGA_R,    // VGA
   output wire [7:0]  VGA_G,
   output wire [7:0]  VGA_B,
+  output wire        VGA_CLK,
   output wire        VGA_HS,
   output wire        VGA_VS,
   output wire        VGA_BLANK_N,
   output wire        VGA_SYNC_N
 );
-  parameter SEVSEG_OFF = 7'b1111111;
+  localparam SEVSEG_OFF  = 7'b1111111;
+  localparam FONT_WIDTH  = 14;
+  localparam FONT_HEIGHT = 32;
 
   // 4 buttons sychronization
   wire [3:0] key_pressed;
@@ -59,8 +58,8 @@ module de2_115
       );
     end
   endgenerate
-  assign HEX0 = SEVSEG_OFF;
-  assign HEX1 = SEVSEG_OFF;
+  assign HEX0 = digits[0];
+  assign HEX1 = digits[1];
   assign HEX2 = SEVSEG_OFF;
   assign HEX3 = SEVSEG_OFF;
   assign HEX4 = SEVSEG_OFF;
@@ -69,16 +68,16 @@ module de2_115
   assign HEX7 = SEVSEG_OFF;
 
 
-  localparam SYM_PER_LINE = 640 / `FONT_WIDTH;
-  localparam LINE_PER_SCREEN = 480 / `FONT_HEIGHT;
+  localparam TEXT_SYMS_PER_LINE = 640 / FONT_WIDTH;
+  localparam TEXT_LINES_PER_SCREEN = 480 / FONT_HEIGHT;
 
-  wire [8 * SYM_PER_LINE * LINE_PER_SCREEN - 1:0] text;
+  wire [8 * TEXT_SYMS_PER_LINE * TEXT_LINES_PER_SCREEN - 1:0] text;
 
   genvar gi;
   generate
-    for (gi = 0; gi < SYM_PER_LINE * LINE_PER_SCREEN; gi = gi + 1)
+    for (gi = 0; gi < TEXT_SYMS_PER_LINE * TEXT_LINES_PER_SCREEN; gi = gi + 1)
     begin: text_loop
-      assign text[(gi + 1) * 8 - 1: gi * 8] =  gi % 256;
+      assign text[(gi + 1) * 8 - 1: gi * 8] = gi % 256;
     end
   endgenerate
 
@@ -88,15 +87,13 @@ module de2_115
       pixel_clock <= 0;
     else
       pixel_clock <= ~pixel_clock;
+  assign VGA_CLK = pixel_clock;
 
-  wire sym_x;
-  wire sym_y;
+  wire [$clog2(FONT_WIDTH)-1:0]  sym_x;
+  wire [$clog2(FONT_HEIGHT)-1:0] sym_y;
+  wire [7:0] sym_code;
   wire sym_pixel;
-  wire sym_code;
   font_vt323_14x32
-  #(
-    .XY_BIT_DEPTH(4)
-  )
   font_rom
   (
     .sym_x(sym_x),
@@ -105,11 +102,11 @@ module de2_115
     .sym_code(sym_code)
   );
 
+  reg [7:0] line_offset;
   vga_text
   #(
-    .FONT_WIDTH(`FONT_WIDTH),
-    .FONT_HEIGHT(`FONT_HEIGHT),
-    .XY_BIT_DEPTH(4)
+    .FONT_WIDTH(FONT_WIDTH),
+    .FONT_HEIGHT(FONT_HEIGHT)
   )
   vga_text_inst 
   (
@@ -117,6 +114,7 @@ module de2_115
     .reset(key_pressed[0]),
 
     .text(text),
+    .line_offset(line_offset),
 
     .sym_pixel(sym_pixel),
     .sym_x(sym_x),
@@ -127,6 +125,21 @@ module de2_115
     .green(VGA_G),
     .blue(VGA_B),
     .hsync(VGA_HS),
-    .vsync(VGA_VS)
+    .vsync(VGA_VS),
+    .sync_n(VGA_SYNC_N),
+    .blank_n(VGA_BLANK_N)
   );
+
+  assign numbers[0] = line_offset[3:0];
+  assign numbers[1] = line_offset[7:4];
+
+  always @(posedge CLOCK_50)
+  begin
+    if (key_pressed[0])
+      line_offset <= 8'b0;
+    else if (key_pressed[1]) 
+      line_offset <= (line_offset == TEXT_LINES_PER_SCREEN - 1) ? 0 : line_offset + 8'b1;
+    else if (key_pressed[2])
+      line_offset <= (line_offset == TEXT_LINES_PER_SCREEN - 1) ? 0 : line_offset - 8'b1;
+  end
 endmodule
