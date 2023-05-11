@@ -32,8 +32,6 @@ module de2_115
   input  wire        PS2_CLK,  // PS/2
   input  wire        PS2_DAT
 );
-  localparam SEVSEG_OFF = 7'b1111111;
-
   // 4 buttons sychronization
   wire [3:0] key_pressed;
   de2_115_buttons
@@ -58,12 +56,4 @@ module de2_115
       );
     end
   endgenerate
-  assign HEX0 = SEVSEG_OFF;
-  assign HEX1 = SEVSEG_OFF;
-  assign HEX2 = SEVSEG_OFF;
-  assign HEX3 = SEVSEG_OFF;
-  assign HEX4 = SEVSEG_OFF;
-  assign HEX5 = SEVSEG_OFF;
-  assign HEX6 = SEVSEG_OFF; 
-  assign HEX7 = SEVSEG_OFF;
 endmodule
