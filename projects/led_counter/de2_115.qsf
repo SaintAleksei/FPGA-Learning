@@ -6,8 +6,8 @@ set_global_assignment -name ORIGINAL_QUARTUS_VERSION 22.1STD.1
 set_global_assignment -name PROJECT_CREATION_TIME_DATE "13:23:07  APRIL 09, 2023"
 set_global_assignment -name LAST_QUARTUS_VERSION "22.1std.1 Lite Edition"
 set_global_assignment -name VERILOG_FILE "./de2_115.v"
+set_global_assignment -name VERILOG_FILE "../../lib/library.v"
 set_global_assignment -name TOP_LEVEL_ENTITY de2_115
-set_global_assignment -name OUTPUT_DIRECTORY "./build"
 # Pin assignment
 set_location_assignment PIN_Y2   -to CLOCK_50
 set_location_assignment PIN_AB28 -to SW[0]
