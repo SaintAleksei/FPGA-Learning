@@ -1,4 +1,4 @@
-`include "lib/library.v"
+`include "lib/vga_text.v"
 `include "font/font_rom_wrapper.v"
 `timescale 1ns / 1ns
 
@@ -32,6 +32,7 @@ module tb_vga_text;
   generate
     for (gi = 0; gi < SYM_PER_LINE * LINE_PER_SCREEN; gi = gi + 1)
     begin: text_loop
+      // Put all available symbol codes in text buffer to see how font looks like
       assign text[(gi + 1) * 8 - 1: gi * 8] =  gi % 256;
     end
   endgenerate
