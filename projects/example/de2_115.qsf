@@ -145,3 +145,5 @@ set_location_assignment PIN_F11 -to VGA_BLANK_N
 set_location_assignment PIN_G13 -to VGA_HS
 set_location_assignment PIN_C13 -to VGA_VS
 set_location_assignment PIN_C10 -to VGA_SYNC_N
+set_location_assignment PIN_G6  -to PS2_CLK
+set_location_assignment PIN_H5  -to PS2_DAT

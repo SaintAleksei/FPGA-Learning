@@ -24,12 +24,15 @@ module de2_115
   output wire [7:0]  VGA_R,    // VGA
   output wire [7:0]  VGA_G,
   output wire [7:0]  VGA_B,
+  output wire        VGA_CLK,
   output wire        VGA_HS,
   output wire        VGA_VS,
   output wire        VGA_BLANK_N,
   output wire        VGA_SYNC_N
+  input  wire        PS2_CLK,  // PS/2
+  input  wire        PS2_DAT
 );
-  parameter SEVSEG_OFF = 7'b1111111;
+  localparam SEVSEG_OFF = 7'b1111111;
 
   // 4 buttons sychronization
   wire [3:0] key_pressed;
