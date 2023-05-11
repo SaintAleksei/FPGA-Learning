@@ -1,4 +1,6 @@
 Fix build errors caused by repo tree refactor
-Add tests to sampling and ps2_receiver modules from library
+Add tests to sampling and ps2_receiver modules
 Add project using ps2_receiver module
 Update README.md
+Add more description
+Divide lib/library.v into logic parts (like lib/vga_text.v)
