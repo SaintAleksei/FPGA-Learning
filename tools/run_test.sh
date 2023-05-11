@@ -5,5 +5,5 @@ if [ -z "$1" ]; then
     exit 1
 fi
 
-iverilog -o testbench -I . -D ICARUS_VERILOG=1 test/$1 && vvp -M vpi -m vgasim testbench
+iverilog -o testbench -I . -D ICARUS_VERILOG=1 test/$1.v && vvp -M vpi -m vgasim testbench
 rm -f testbench
